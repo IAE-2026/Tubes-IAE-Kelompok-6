@@ -1,0 +1,1 @@
+# 102022400126_Farid-Maulana-Lahan-Lokasi
