@@ -1,19 +1,3 @@
-# AI Prompt Log - Service A (Lahan & Lokasi)
-
-Rekap penggunaan AI dalam pengembangan backend Service A - Lahan & Lokasi untuk Tugas Besar Integrasi Aplikasi Enterprise. File ini telah dirombak untuk berfokus penuh secara mandiri pada Service A (menghapus dependensi lokal Service B & C).
-
-## Informasi Proyek
-
-| Parameter | Value |
-|-----------|-------|
-| **Mata Kuliah** | BBK2HAB3 - Integrasi Aplikasi Enterprise |
-| **Kelompok** | 6 (Fokus Mandiri Service A) |
-| **Tanggal Pembaruan** | 16 Mei 2026 |
-| **Teknologi Backend** | Laravel 11 |
-| **Mahasiswa** | Farid Maulana (NIM: 102022400039) |
-
----
-
 ## Log Prompting & Alur Kerja Pengembangan
 
 ### Prompt 1 — Isolasi dan Refactor Project ke Laravel Mandiri
