@@ -1,6 +1,6 @@
 ## Proses Bisnis
 Kelompok 6
-3 Mini-Service:
+ada 3 Mini-Service:
 1. **Service A (Location & Slot Service)** : mengelola slot parkir dan status okupansi tempat parkir.
 2. **Service B (Transaction & Payment Service) [Hadid, saya sendiri]** : menangani transaksi parkir (tap-in, checkout, pay) dan pembayaran (service ini).
 3. **Service C (Membership & Voucher Service)** : mengelola data keanggotaan (membership) dan validasi/penggunaan voucher.
