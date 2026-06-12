@@ -1,10 +1,5 @@
-## Proses Bisnis
 Kelompok 6
-ada 3 Mini-Service:
-1. **Service A (Location & Slot Service)** : mengelola slot parkir dan status okupansi tempat parkir.
 2. **Service B (Transaction & Payment Service) [Hadid, saya sendiri]** : menangani transaksi parkir (tap-in, checkout, pay) dan pembayaran (service ini).
-3. **Service C (Membership & Voucher Service)** : mengelola data keanggotaan (membership) dan validasi/penggunaan voucher.
-
 
 ### alur bisnis Service B (Transaction & Payment Service):
 
@@ -15,7 +10,7 @@ ada 3 Mini-Service:
 5. **Penyebaran Event** : Setelah transaksi berhasil diselesaikan, service mempublikasikan event `PaymentProcessed` ke message broker RabbitMQ dosen secara asinkron agar service lain (seperti Finance untuk pelaporan dan departemen Notifikasi untuk struk) mengetahui pembayaran telah lunas.
 6. **Selesai** : Respons sukses dikembalikan ke user beserta rincian transaksi, receipt number audit SOAP, dan status publish RabbitMQ.
 
-**Posisi service ini dalam alur:**
+**Posisi service B didalam alur:**
 
 Sebagai **Pengelola Siklus Hidup Transaksi Parkir**. Dimana service ini menjadi penanggung jawab tunggal untuk mencatat data tapping masuk, menghitung kalkulasi tarif keluar secara presisi, serta menjamin kevalidan transaksi keuangan parkir. Semua perubahan status parkir wajib melalui endpoint transaksi service ini.
 
