@@ -1,14 +1,14 @@
-*Pemilihan Transaksi Penting dan Transaksi yang Harus Disebar*
+**Pemilihan Transaksi Penting dan Transaksi yang Harus Disebar**
 
 Di Service A (Lahan & Lokasi) ini ada tiga endpoint utama, yaitu GET /api/v1/locations untuk melihat daftar lokasi parkir, GET /api/v1/locations/{id} untuk melihat detail dari satu lokasi tertentu (seperti tarif dan tipe parkir VIP/regular), dan POST /api/v1/locations untuk menambahkan data master lahan baru.
 
 Dari ketiga pilihan tersebut, endpoint yang saya pilih sebagai transaksi penting untuk SOAP Audit sekaligus transaksi yang harus disebar lewat RabbitMQ adalah POST /api/v1/locations.
 
-*Alasan Pemilihan*
+**Alasan Pemilihan**
 
 Alasannya karena POST /api/v1/locations adalah satu-satunya endpoint yang melakukan perubahan data (create). Sementara, dua endpoint GET lainnya hanya dipakai untuk membaca data saja, jadi tidak ada perubahan status data yang perlu dicatat atau dioper ke service lain. Karena POST ini menambahkan lokasi parkir baru, otomatis ada data masuk yang wajib dipertanggungjawabkan ke akuratannya.
 
-*Alur Bisnis*
+**Alur Bisnis**
 
 1. Request Token (Autentikasi)
 Proses diawali dengan mengirimkan kredensial warga berupa email dan password, dan juga menggunakan API Key untuk token M2M (TEAM-06), ke SSO Server Cloud Pusat melalui Postman. Server kemudian memvalidasi akun tersebut dan mengirimkan kembali token JWT yang nantinya digunakan sebagai akses untuk endpoint yang dikunci.
@@ -32,7 +32,7 @@ Langkah berikutnya, Location Service memanggil Event Publisher untuk menyebarkan
 Setelah seluruh rangkaian proses di atas selesai tanpa ada kendala, Location Service akan mengirimkan respon akhir 201 Created kembali ke pengguna. Respon ini menampilkan seluruh data master lokasi yang baru terdaftar, lengkap dengan receipt_number sebagai bukti final.
 
 
-*Batasan Service*
+**Batasan Service**
 
 Service A ini fokusnya hanya untuk mengelola data master dari lokasi parkir saja. Jadi, service ini tidak ikut campur dalam mengurus data kendaraan, pencatatan jam masuk/keluar parkir, ataupun sistem pembayarannya. Ketika ada lokasi baru yang diinput, Service A cuma menyimpan informasi yang sifatnya statis seperti nama, alamat, tipe, kapasitas slot, dan tarif dasarnya.
 
