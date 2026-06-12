@@ -1,6 +1,5 @@
 FROM php:8.2-cli
 
-# Install system dependencies
 RUN apt-get update && apt-get install -y \
     git \
     curl \
@@ -13,27 +12,21 @@ RUN apt-get update && apt-get install -y \
 
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install PHP extensions
 RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
 
-# Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www
 
-# Copy application files
 COPY . /var/www
 
-# Install dependencies
 RUN composer install --no-interaction --optimize-autoloader
 
-# Set permissions
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 RUN chmod -R 775 /var/www/storage /var/www/bootstrap/cache
 
 EXPOSE 3001
 
-# Entrypoint: migrate, seed, generate swagger docs, then serve
 CMD php artisan migrate --force && \
     php artisan db:seed --force && \
     php artisan l5-swagger:generate && \

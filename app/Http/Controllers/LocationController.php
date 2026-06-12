@@ -4,7 +4,11 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Location;
+use App\Services\SoapAuditService;
+use App\Services\AmqpPublisherService;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use OpenApi\Attributes as OA;
 
 class LocationController extends Controller {
@@ -73,7 +77,7 @@ class LocationController extends Controller {
         path: "/locations",
         operationId: "storeLocation",
         tags: ["Locations"],
-        summary: "Menambahkan master data lahan baru",
+        summary: "Menambahkan master data lahan baru (triggers SOAP Audit & AMQP Event)",
         security: [["ApiKeyAuth" => []]],
         requestBody: new OA\RequestBody(
             required: true,
@@ -127,14 +131,114 @@ class LocationController extends Controller {
         $location->base_rate = $request->base_rate;
         $location->save();
 
+        // Integrasi SOAP Audit & AMQP Publisher
+        $integrationResults = ['soap_audit' => null, 'amqp_publish' => null];
+        $bearerToken = $this->obtainBearerToken($request);
+
+        if ($bearerToken) {
+            // SOAP Audit
+            try {
+                $soapService = new SoapAuditService();
+                $auditResult = $soapService->sendAudit(
+                    'LocationCreated',
+                    [
+                        'location_id' => $location->id,
+                        'name' => $location->name,
+                        'address' => $location->address,
+                        'type' => $location->type,
+                        'parking_type' => $location->parking_type,
+                        'total_spots' => $location->total_spots,
+                        'base_rate' => $location->base_rate,
+                        'created_at' => $location->created_at?->toIso8601String(),
+                    ],
+                    $location->id,
+                    $bearerToken
+                );
+                $integrationResults['soap_audit'] = $auditResult;
+            } catch (\Exception $e) {
+                Log::error('[Store] SOAP error', ['error' => $e->getMessage()]);
+                $integrationResults['soap_audit'] = ['success' => false, 'error' => $e->getMessage()];
+            }
+
+            // AMQP Publisher
+            try {
+                $receiptNumber = $integrationResults['soap_audit']['receipt_number'] ?? null;
+
+                $amqpService = new AmqpPublisherService();
+                $publishResult = $amqpService->publish(
+                    'location.created',
+                    [
+                        'location_id' => $location->id,
+                        'name' => $location->name,
+                        'address' => $location->address,
+                        'type' => $location->type,
+                        'parking_type' => $location->parking_type,
+                        'total_spots' => $location->total_spots,
+                        'available_spots' => $location->available_spots,
+                        'base_rate' => $location->base_rate,
+                        'receipt_number' => $receiptNumber,
+                        'created_at' => $location->created_at?->toIso8601String(),
+                        'updated_at' => $location->updated_at?->toIso8601String(),
+                    ],
+                    $bearerToken
+                );
+                $integrationResults['amqp_publish'] = $publishResult;
+            } catch (\Exception $e) {
+                Log::error('[Store] AMQP error', ['error' => $e->getMessage()]);
+                $integrationResults['amqp_publish'] = ['success' => false, 'error' => $e->getMessage()];
+            }
+        } else {
+            Log::warning('[Store] No bearer token available');
+            $integrationResults['soap_audit'] = ['success' => false, 'error' => 'No bearer token'];
+            $integrationResults['amqp_publish'] = ['success' => false, 'error' => 'No bearer token'];
+        }
+
+        $receiptNumber = $integrationResults['soap_audit']['receipt_number'] ?? null;
+        $locationData = $location->toArray();
+        if ($receiptNumber) {
+            $locationData['receipt_number'] = $receiptNumber;
+        }
+
         return response()->json([
             'status' => 'success',
             'message' => 'Location master data created successfully',
-            'data' => $location,
+            'data' => [
+                'location' => $locationData,
+                'receipt_number' => $receiptNumber,
+            ],
             'meta' => [
                 'service_name' => 'Lahan-Lokasi-Service',
                 'api_version' => 'v1'
             ]
         ], 201);
+    }
+
+    /**
+     * M2M token untuk integrasi Cloud Pusat (agar pengirim = TEAM-06).
+     */
+    protected function obtainBearerToken(Request $request): ?string
+    {
+        try {
+            $ssoUrl = rtrim(env('IAE_SSO_URL', 'https://iae-sso.virtualfri.id'), '/');
+            $apiKey = env('IAE_API_KEY', 'KEY-MHS-67');
+
+            $response = Http::timeout(15)->post("{$ssoUrl}/api/v1/auth/token", [
+                'api_key' => $apiKey,
+            ]);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                $token = $data['token'] ?? $data['access_token'] ?? $data['data']['token'] ?? null;
+                if ($token) return $token;
+            }
+        } catch (\Exception $e) {
+            Log::error('[Auth] M2M token failed', ['error' => $e->getMessage()]);
+        }
+
+        // Fallback: SSO token dari request
+        $ssoToken = $request->input('sso_token');
+        if ($ssoToken) return $ssoToken;
+
+        return null;
     }
 }

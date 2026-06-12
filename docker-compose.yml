@@ -20,6 +20,11 @@ services:
       - SESSION_DRIVER=file
       - CACHE_STORE=file
       - QUEUE_CONNECTION=sync
+      - IAE_SSO_URL=https://iae-sso.virtualfri.id
+      - IAE_API_KEY=KEY-MHS-67
+      - IAE_SSO_EMAIL=warga20@ktp.iae.id
+      - IAE_SSO_PASSWORD=KtpDigital2026!
+      - IAE_TEAM_ID=TEAM-06
     depends_on:
       mysql_db_service_a:
         condition: service_healthy
