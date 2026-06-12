@@ -1,0 +1,64 @@
+services:
+  app:
+    build: .
+    container_name: iae-t3-app
+    restart: unless-stopped
+    ports:
+      - "3002:3002"
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - APP_KEY=base64:st2FXQB17Q9BmQ1YSRVAF7qh02lXXPHCoFxf5AIfgYg=
+      - APP_URL=http://localhost:3002
+      - PORT=3002
+      - LOG_CHANNEL=stack
+      - SESSION_DRIVER=file
+      - CACHE_STORE=array
+      - DB_CONNECTION=mysql
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=service_b
+      - DB_USERNAME=service_b
+      - DB_PASSWORD=service_b_secret
+      - IAE_INTERNAL_KEY=102022400126
+      - IAE_API_KEYS=102022400126
+      - IAE_BASE_URL=https://iae-sso.virtualfri.id
+      - IAE_TEAM_ID=TEAM-06
+      - IAE_API_KEY=KEY-MHS-185
+      - IAE_WARGA_EMAIL=warga28@ktp.iae.id
+      - IAE_WARGA_PASSWORD=KtpDigital2026!
+      - LIGHTHOUSE_SCHEMA_CACHE_ENABLE=false
+      - LIGHTHOUSE_QUERY_CACHE_ENABLE=false
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - iae-t3-net
+
+  mysql:
+    image: mysql:8.0
+    container_name: iae-t3-mysql
+    restart: unless-stopped
+    ports:
+      - "3307:3306"
+    environment:
+      - MYSQL_DATABASE=service_b
+      - MYSQL_USER=service_b
+      - MYSQL_PASSWORD=service_b_secret
+      - MYSQL_ROOT_PASSWORD=root_secret
+    volumes:
+      - iae-t3-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot_secret"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - iae-t3-net
+
+volumes:
+  iae-t3-mysql-data:
+
+networks:
+  iae-t3-net:
+    driver: bridge

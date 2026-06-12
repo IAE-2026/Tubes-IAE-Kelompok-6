@@ -1,0 +1,65 @@
+%% Tugas 3 IAE - Service B (Smart Parking)
+%% Sequence Diagram: orkestrasi transaksi kritis payTransaction
+%% Modul 1 (SSO) -> Modul 2 (SOAP Audit) -> Modul 3 (RabbitMQ)
+sequenceDiagram
+    autonumber
+    actor Client as Klien (Kasir/App Warga)
+    participant GQL as Service B - GraphQL /graphql
+    participant MW as ResolveIaeIdentity (Modul 1)
+    participant RM as JwtVerifier + RoleMapper
+    participant PAY as PayTransaction (Resolver)
+    participant SVC as TransactionService
+    participant SOAP as SoapAuditClient (Modul 2)
+    participant MQC as MessageBrokerClient (Modul 3)
+    participant DB as DB Lokal (users/roles/transactions/audit_logs)
+    participant SSO as Cloud Dosen - SSO REST
+    participant AUDIT as Cloud Dosen - Audit SOAP
+    participant MQ as Cloud Dosen - RabbitMQ
+
+    rect rgb(238, 246, 255)
+    note over Client,RM: Modul 1 - Federated SSO
+    Client->>GQL: POST /graphql mutation payTransaction(id, method)<br/>Authorization: Bearer JWT
+    GQL->>MW: handle(request)
+    MW->>SSO: GET /api/v1/auth/jwks (cache)
+    SSO-->>MW: public keys (RS256)
+    MW->>RM: verify(JWT) + provision(claims)
+    RM->>DB: updateOrCreate user (by sub) + map klaim -> role lokal
+    DB-->>RM: User + role lokal
+    RM-->>MW: IaeIdentity(authenticated, localRole, token)
+    MW-->>GQL: bind IaeIdentity ke container
+    GQL->>PAY: resolve(args)
+    end
+
+    alt JWT tidak valid / tanpa token
+        PAY-->>Client: error otorisasi (transaksi dibatalkan)
+    else JWT valid & role termasuk allowed_to_pay
+        note over PAY: Gerbang otorisasi lolos<br/>(role: customer/cashier/finance-admin/service-account)
+
+        rect rgb(240, 255, 244)
+        note over PAY,DB: Eksekusi transaksi kritis (state-changing keuangan)
+        PAY->>SVC: pay(id, method, processedBy)
+        SVC->>DB: status = SELESAI, paid_at, processed_by
+        DB-->>SVC: transaksi terbaru
+        SVC-->>PAY: transaction
+        end
+
+        rect rgb(255, 246, 240)
+        note over PAY,AUDIT: Modul 2 - SOAP Audit (sinkron, butuh ReceiptNumber)
+        PAY->>SOAP: send("PaymentProcessed", logContent JSON, id)
+        SOAP->>AUDIT: POST /soap/v1/audit (Bearer)<br/>SOAP Envelope XML, LogContent=CDATA(JSON)
+        AUDIT-->>SOAP: Status=SUCCESS, ReceiptNumber=IAE-LOG-2026-XXXX
+        SOAP->>DB: simpan audit_logs + receipt_number
+        SOAP-->>PAY: {ok, receipt_number, status}
+        end
+
+        rect rgb(245, 240, 255)
+        note over PAY,MQ: Modul 3 - Broadcast event (asinkron)
+        PAY->>MQC: publish("PaymentProcessed", payload JSON)
+        MQC->>MQ: POST /api/v1/messages/publish (Bearer)<br/>event -> iae.central.exchange
+        MQ-->>MQC: ack (published)
+        MQC-->>PAY: {ok, message_id}
+        end
+
+        PAY->>DB: update audit_receipt_number, event_published_status
+        PAY-->>Client: PaymentResult { transaction, audit{receipt}, event{ok} }
+    end
