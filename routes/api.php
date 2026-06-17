@@ -32,4 +32,7 @@ Route::prefix('v1')->middleware(['iae.sso'])->group(function () {
     Route::get('/locations', [LocationController::class, 'index']);
     Route::get('/locations/{id}', [LocationController::class, 'show']);
     Route::post('/locations', [LocationController::class, 'store']);
+    Route::post('/locations/{id}/occupy', [LocationController::class, 'occupy']);
+    Route::post('/locations/{id}/release', [LocationController::class, 'release']);
+    Route::post('/events/rabbitmq-callback', [LocationController::class, 'handleEventCallback']);
 });

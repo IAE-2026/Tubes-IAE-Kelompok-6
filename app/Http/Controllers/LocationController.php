@@ -241,4 +241,233 @@ class LocationController extends Controller {
 
         return null;
     }
+
+    #[OA\Post(
+        path: "/locations/{id}/occupy",
+        operationId: "occupyLocationSpot",
+        tags: ["Locations"],
+        summary: "Mengurangi slot parkir yang tersedia saat digunakan",
+        security: [["ApiKeyAuth" => []]],
+        parameters: [
+            new OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "string")),
+        ],
+        requestBody: new OA\RequestBody(
+            required: false,
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: "slots", type: "integer", example: 1)
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: "Spot occupied successfully"),
+            new OA\Response(response: 400, description: "Validation error or insufficient slots"),
+            new OA\Response(response: 404, description: "Location not found")
+        ]
+    )]
+    public function occupy(Request $request, $id)
+    {
+        $location = Location::find($id);
+        if (!$location) {
+            return response()->json([
+                'status' => 'error',
+                'message' => "Resource with ID $id not found",
+                'errors' => null
+            ], 404);
+        }
+
+        $slots = $request->input('slots', 1);
+        if (!is_numeric($slots) || (int) $slots <= 0) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validation Error',
+                'errors' => ['The slots field must be a positive integer.']
+            ], 400);
+        }
+        $slots = (int) $slots;
+
+        if ($location->available_spots < $slots) {
+            return response()->json([
+                'status' => 'error',
+                'message' => "Insufficient available spots. Remaining spots: $location->available_spots, requested: $slots",
+                'errors' => null
+            ], 400);
+        }
+
+        $location->available_spots -= $slots;
+        $location->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => "$slots parking spot(s) successfully occupied",
+            'data' => $location,
+            'meta' => [
+                'service_name' => 'Lahan-Lokasi-Service',
+                'api_version' => 'v1'
+            ]
+        ], 200);
+    }
+
+    #[OA\Post(
+        path: "/locations/{id}/release",
+        operationId: "releaseLocationSpot",
+        tags: ["Locations"],
+        summary: "Menambah slot parkir yang tersedia saat slot kembali kosong",
+        security: [["ApiKeyAuth" => []]],
+        parameters: [
+            new OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "string")),
+        ],
+        requestBody: new OA\RequestBody(
+            required: false,
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: "slots", type: "integer", example: 1)
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: "Spot released successfully"),
+            new OA\Response(response: 400, description: "Validation error or capacity exceeded"),
+            new OA\Response(response: 404, description: "Location not found")
+        ]
+    )]
+    public function release(Request $request, $id)
+    {
+        $location = Location::find($id);
+        if (!$location) {
+            return response()->json([
+                'status' => 'error',
+                'message' => "Resource with ID $id not found",
+                'errors' => null
+            ], 404);
+        }
+
+        $slots = $request->input('slots', 1);
+        if (!is_numeric($slots) || (int) $slots <= 0) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validation Error',
+                'errors' => ['The slots field must be a positive integer.']
+            ], 400);
+        }
+        $slots = (int) $slots;
+
+        if ($location->available_spots + $slots > $location->total_spots) {
+            return response()->json([
+                'status' => 'error',
+                'message' => "Cannot release spots beyond total capacity. Total capacity: $location->total_spots, current available: $location->available_spots, requested release: $slots",
+                'errors' => null
+            ], 400);
+        }
+
+        $location->available_spots += $slots;
+        $location->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => "$slots parking spot(s) successfully released",
+            'data' => $location,
+            'meta' => [
+                'service_name' => 'Lahan-Lokasi-Service',
+                'api_version' => 'v1'
+            ]
+        ], 200);
+    }
+
+    #[OA\Post(
+        path: "/events/rabbitmq-callback",
+        operationId: "handleRabbitMQEventCallback",
+        tags: ["Locations"],
+        summary: "Simulasi penerimaan event RabbitMQ (webhook) untuk slot management",
+        security: [["ApiKeyAuth" => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ["event", "data"],
+                properties: [
+                    new OA\Property(property: "event", type: "string", example: "parking.slot.occupied"),
+                    new OA\Property(property: "data", type: "object", properties: [
+                        new OA\Property(property: "location_id", type: "string", example: "loc_001"),
+                        new OA\Property(property: "slots", type: "integer", example: 1)
+                    ])
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: "Event processed successfully"),
+            new OA\Response(response: 400, description: "Validation error or process failure"),
+            new OA\Response(response: 404, description: "Location not found")
+        ]
+    )]
+    public function handleEventCallback(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'event' => 'required|string|in:parking.slot.occupied,parking.slot.released,parking.payment.completed',
+            'data.location_id' => 'required|string',
+            'data.slots' => 'nullable|integer|min:1',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validation Error',
+                'errors' => $validator->errors()->all()
+            ], 400);
+        }
+
+        $event = $request->input('event');
+        $locationId = $request->input('data.location_id');
+        $slots = (int) $request->input('data.slots', 1);
+
+        $location = Location::find($locationId);
+        if (!$location) {
+            return response()->json([
+                'status' => 'error',
+                'message' => "Location with ID $locationId not found",
+                'errors' => null
+            ], 404);
+        }
+
+        if ($event === 'parking.slot.occupied') {
+            if ($location->available_spots < $slots) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => "Insufficient spots. Remaining spots: $location->available_spots, requested: $slots",
+                    'errors' => null
+                ], 400);
+            }
+            $location->available_spots -= $slots;
+        } elseif ($event === 'parking.slot.released' || $event === 'parking.payment.completed') {
+            if ($location->available_spots + $slots > $location->total_spots) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => "Releasing spots exceeds total spots capacity. Total capacity: $location->total_spots, current: $location->available_spots, requested: $slots",
+                    'errors' => null
+                ], 400);
+            }
+            $location->available_spots += $slots;
+        }
+
+        $location->save();
+
+        Log::info('[RabbitMQ Webhook] Event simulation processed', [
+            'event' => $event,
+            'location_id' => $locationId,
+            'slots' => $slots,
+            'new_available_spots' => $location->available_spots
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => "Event $event successfully processed",
+            'data' => [
+                'event' => $event,
+                'location' => $location,
+            ],
+            'meta' => [
+                'service_name' => 'Lahan-Lokasi-Service',
+                'api_version' => 'v1'
+            ]
+        ], 200);
+    }
 }
