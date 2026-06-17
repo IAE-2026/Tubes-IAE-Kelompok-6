@@ -1,63 +1,93 @@
-<<<<<<< HEAD
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Service A - Lahan & Lokasi Parkir
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Repository ini berisi Service A (Lahan & Lokasi Parkir) untuk tugas besar Integrasi Aplikasi Enterprise (IAE). Service ini dibangun menggunakan Laravel 11, PHP 8.2, dan database MySQL.
 
-## About Laravel
+Service ini bertanggung jawab buat mengelola master data lokasi parkir, kapasitas total slot, sisa kuota slot yang tersedia, serta menghitung tarif dasar parkir.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Identitas Anggota
+* **Nama**: Farid Maulana
+* **NIM**: 102022400039
+* **Tim**: TEAM-06 (Kelompok 6)
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Skema Database
+Terdapat 3 tabel utama yang digunakan:
+1. `locations`: Menyimpan informasi lahan parkir (id, nama, alamat, tipe indoor/outdoor, tipe parkir regular/vip, total slot, sisa slot, dan tarif dasar). Format ID lokasi adalah custom `loc_XXX` (contoh: `loc_001`).
+2. `roles`: Sinkronisasi hak akses email SSO lokal (default `viewer`).
+3. `audit_receipts`: Menyimpan `receipt_number` hasil SOAP Audit yang dikirim ke server pusat dosen.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Kontrak API Endpoints
 
-## Learning Laravel
+Semua endpoint dilindungi oleh middleware SSO JWT (`iae.sso`) dan wajib menyertakan header `Authorization: Bearer <token_jwt>`.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+### 1. GET /api/v1/locations
+* **Fungsi**: Menampilkan seluruh daftar lokasi parkir.
+* **Response**: List lokasi parkir dalam format JSON.
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### 2. GET /api/v1/locations/{id}
+* **Fungsi**: Menampilkan detail data untuk satu lokasi parkir berdasarkan ID.
+* **Response**: Detail lokasi parkir JSON.
 
-## Laravel Sponsors
+### 3. POST /api/v1/locations
+* **Fungsi**: Menambahkan data master lokasi parkir baru.
+* **Request Body**:
+  ```json
+  {
+    "name": "Gedung Parkir TULT",
+    "address": "Jl. Telekomunikasi No. 1, Bandung",
+    "type": "indoor",
+    "parking_type": "regular",
+    "total_spots": 100,
+    "base_rate": 3000
+  }
+  ```
+* **Proses di belakang layar**:
+  1. Meng-generate ID baru secara berurutan (`loc_001`, `loc_002`, dst).
+  2. Menyimpan data lokasi ke database lokal.
+  3. Memanggil M2M token SSO, lalu mengirim SOAP XML Audit ke server pusat dosen untuk mengambil `ReceiptNumber`.
+  4. Menyimpan `ReceiptNumber` ke tabel `audit_receipts` lokal.
+  5. Mempublikasikan event `location.created` berisi data lengkap ke RabbitMQ exchange pusat.
+  6. Mengembalikan response 201 dengan data lokasi dan receipt number.
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### 4. POST /api/v1/locations/{id}/occupy
+* **Fungsi**: Mengurangi sisa kapasitas slot parkir (`available_spots`) saat digunakan.
+* **Request Body** (opsional): `{"slots": 1}`
+* **Response**: Mengembalikan data lokasi terupdate. Jika sisa slot habis (0), akan membalas dengan error `400 Bad Request`.
 
-### Premium Partners
+### 5. POST /api/v1/locations/{id}/release
+* **Fungsi**: Menambah kembali sisa kapasitas slot parkir saat slot kosong.
+* **Request Body** (opsional): `{"slots": 1}`
+* **Response**: Mengembalikan data lokasi terupdate. Penambahan slot tidak boleh melebihi batas total slot (`total_spots`).
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+### 6. POST /api/v1/events/rabbitmq-callback
+* **Fungsi**: Webhook simulasi penerimaan event asinkron dari RabbitMQ via HTTP.
+* **Request Body**:
+  ```json
+  {
+    "event": "parking.slot.occupied",
+    "data": {
+      "location_id": "loc_001",
+      "slots": 1
+    }
+  }
+  ```
+* **Keterangan**: Menerima event simulasi `parking.slot.occupied` (kurangi kuota slot), `parking.slot.released` (tambah kuota slot), atau `parking.payment.completed` (tambah kuota slot).
 
-## Contributing
+## Asynchronous RabbitMQ Consumer (Worker)
+Untuk mendengarkan event RabbitMQ secara langsung di background, jalankan perintah Artisan berikut:
+```bash
+php artisan rabbitmq:consume
+```
+Worker ini otomatis mendengarkan exchange `iae.central.exchange` dengan queue `team06_smart_parking_queue` untuk event berikut:
+* `parking.slot.occupied` -> Otomatis mengurangi `available_spots` di database.
+* `parking.slot.released` -> Otomatis menambah `available_spots` di database.
+* `parking.payment.completed` -> Otomatis menambah `available_spots` di database.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
-=======
-# 102022400039_Farid-Maulana-Lahan-Lokasi
->>>>>>> fac0dc1be5c0b03af7a7146a7a191f1cb2524b39
+## Instalasi & Cara Menjalankan
+1. Salin `.env.example` menjadi `.env` dan atur konfigurasi database serta kredensial SSO pusat.
+2. Jalankan perintah:
+   ```bash
+   composer install
+   php artisan key:generate
+   php artisan migrate --seed
+   php artisan serve --port=3001
+   ```
