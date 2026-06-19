@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   # ==========================================
-  # 🌐 API GATEWAY (NGINX)
+  # API GATEWAY (NGINX)
   # ==========================================
   api_gateway:
     image: nginx:stable-alpine
