@@ -8,8 +8,16 @@ use Illuminate\Support\Facades\Log;
 class AuditSoapService
 {
     // TODO: Ganti KEY-MHS-01 ini dengan API KEY asli milik kelompokmu (misal: KEY-MHS-06)
-    private string $apiKey = 'KEY-MHS-45'; 
-    private string $ssoBaseUrl = 'https://iae-sso.virtualfri.id';
+private string $apiKey;
+private string $nim;
+private string $ssoBaseUrl;
+
+public function __construct()
+{
+    $this->apiKey = env('IAE_API_KEY', 'KEY-MHS-45');
+    $this->nim = env('IAE_NIM', '102022400023');
+    $this->ssoBaseUrl = rtrim(env('IAE_SSO_URL', 'https://iae-sso.virtualfri.id'), '/');
+}
 
     /**
      * Meminta M2M (Machine-to-Machine) Token ke server pusat
@@ -18,9 +26,9 @@ class AuditSoapService
     {
         try {
             $response = Http::post("{$this->ssoBaseUrl}/api/v1/auth/token", [
-                'api_key' => $this->apiKey
+            'api_key' => $this->apiKey,
+            'nim' => $this->nim,
             ]);
-
             if ($response->successful() && $response->json('access_token')) {
                 return $response->json('access_token');
             } elseif ($response->successful() && $response->json('token')) {
