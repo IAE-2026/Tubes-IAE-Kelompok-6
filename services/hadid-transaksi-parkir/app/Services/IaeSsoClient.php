@@ -91,10 +91,12 @@ class IaeSsoClient
             Cache::forget('iae:m2m_token');
         }
 
-        return Cache::remember('iae:m2m_token', $ttl, function (): ?string {
-            return $this->requestToken(['api_key' => config('iae.api_key')]);
-        });
-    }
+       return Cache::remember('iae:m2m_token', $ttl, function (): ?string {
+    return $this->requestToken([
+        'api_key' => config('iae.api_key'),
+        'nim' => config('iae.nim'),
+    ]);
+});
 
     /**
      * Access token end-user (SSO Warga). Tidak di-cache.
