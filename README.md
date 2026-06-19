@@ -102,6 +102,19 @@ Container yang harus hidup:
 - smart-parking-service-b-db
 - smart-parking-service-c-db
 
+4. Tunggu service selesai boot.
+
+Setelah build, status container bisa langsung `Started`, tetapi Laravel di dalam container masih menyiapkan migrasi, seeder, cache, dan server. Tunggu sekitar 20 sampai 30 detik sebelum test endpoint.
+
+~~~powershell
+Start-Sleep -Seconds 20
+curl.exe http://localhost/
+curl.exe http://localhost/health/service-a
+curl.exe http://localhost/health/service-c
+~~~
+
+Jika muncul `502 Bad Gateway`, gateway sudah hidup tetapi service tujuan belum siap. Tunggu sebentar, lalu ulangi command health.
+
 ## Endpoint Lewat Gateway
 
 - GET /health
@@ -149,6 +162,13 @@ Jika output `$responseRaw` diawali `<html` atau `<!DOCTYPE html>`, berarti endpo
 ~~~powershell
 docker compose ps
 docker compose up -d --build api_gateway app_service_a
+~~~
+
+Jika output berupa `502 Bad Gateway`, tunggu Service A selesai boot lalu coba lagi.
+
+~~~powershell
+Start-Sleep -Seconds 20
+docker compose logs app_service_a --tail=80
 ~~~
 
 Cek lokasi dengan token asli dari variabel `$token`.
