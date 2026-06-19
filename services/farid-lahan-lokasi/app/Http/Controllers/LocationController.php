@@ -221,9 +221,11 @@ class LocationController extends Controller {
         try {
             $ssoUrl = rtrim(env('IAE_SSO_URL', 'https://iae-sso.virtualfri.id'), '/');
             $apiKey = env('IAE_API_KEY', 'KEY-MHS-67');
+            $nim = env('IAE_NIM', '102022400039');
 
             $response = Http::timeout(15)->post("{$ssoUrl}/api/v1/auth/token", [
-                'api_key' => $apiKey,
+            'api_key' => $apiKey,
+            'nim' => $nim,
             ]);
 
             if ($response->successful()) {
