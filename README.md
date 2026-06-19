@@ -110,22 +110,34 @@ Container yang harus hidup:
 
 ## Contoh Test Singkat
 
-Ambil token M2M Service A.
+Ambil token M2M Service A. Command ini menyimpan token ke variabel `$token`.
 
 ~~~powershell
-curl.exe -X POST http://localhost/api/v1/sso/login-m2m -H "Content-Type: application/json" -d '{"api_key":"KEY-MHS-67","nim":"102022400039"}'
+$response = curl.exe -s -X POST http://localhost/api/v1/sso/login-m2m `
+  -H "Content-Type: application/json" `
+  -d '{"api_key":"KEY-MHS-67","nim":"102022400039"}' | ConvertFrom-Json
+
+$token = $response.data.token
 ~~~
 
-Pakai token dari response untuk cek lokasi.
+Cek token. Token yang benar biasanya panjang dan diawali `eyJ`.
 
 ~~~powershell
-curl.exe http://localhost/api/v1/locations -H "Authorization: Bearer TOKEN_DARI_SSO"
+$token
 ~~~
 
-Cek membership.
+Cek lokasi dengan token asli dari variabel `$token`.
 
 ~~~powershell
-curl.exe http://localhost/api/v1/memberships -H "Authorization: Bearer TOKEN_DARI_SSO"
+curl.exe http://localhost/api/v1/locations `
+  -H "Authorization: Bearer $token"
+~~~
+
+Cek membership dengan token yang sama.
+
+~~~powershell
+curl.exe http://localhost/api/v1/memberships `
+  -H "Authorization: Bearer $token"
 ~~~
 
 Cek transaksi.
