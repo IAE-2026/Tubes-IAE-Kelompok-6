@@ -121,13 +121,20 @@ Container yang harus hidup:
 
 ## Contoh Test Singkat
 
-Ambil token M2M Service A. Command ini menyimpan token ke variabel `$token`.
+Ambil token M2M Service A. Simpan response mentah dulu agar mudah dicek.
 
 ~~~powershell
-$response = curl.exe -s -X POST http://localhost/api/v1/sso/login-m2m `
+$responseRaw = curl.exe -s -X POST http://localhost/api/v1/sso/login-m2m `
   -H "Content-Type: application/json" `
-  -d '{"api_key":"KEY-MHS-67","nim":"102022400039"}' | ConvertFrom-Json
+  -d '{"api_key":"KEY-MHS-67","nim":"102022400039"}'
 
+$responseRaw
+~~~
+
+Jika output sudah JSON, ubah response menjadi object PowerShell.
+
+~~~powershell
+$response = $responseRaw | ConvertFrom-Json
 $token = $response.data.token
 ~~~
 
@@ -135,6 +142,13 @@ Cek token. Token yang benar biasanya panjang dan diawali `eyJ`.
 
 ~~~powershell
 $token
+~~~
+
+Jika output `$responseRaw` diawali `<html` atau `<!DOCTYPE html>`, berarti endpoint mengembalikan halaman HTML. Jangan lanjut pakai `$token`. Cek container dan rebuild gateway bersama Service A.
+
+~~~powershell
+docker compose ps
+docker compose up -d --build api_gateway app_service_a
 ~~~
 
 Cek lokasi dengan token asli dari variabel `$token`.
