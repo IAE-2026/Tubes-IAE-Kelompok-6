@@ -3,10 +3,17 @@
 Project di dalam sistem ini semua service dihubungkan melalui satu API Gateway (Nginx) dan dijalankan menggunakan Docker Compose.
 
 ## Pembagian Kerja dan servicenya
-Sistem Smart Parking Kelompok 6 ada 3 service utama:
-1. **Service A (Lahan & Lokasi)** - Oleh **Farid Maulana**.
-2. **Service B (Transaksi Parkir)** - Oleh **Hadid Hamar**..
-3. **Service C (Pembayaran)** - Oleh **Dinda Juniar**.
+1. **Service A - Lahan & Lokasi Parkir**  
+   Developer: **Farid Maulana**  
+   NIM: **102022400039**
+
+2. **Service B - Transaksi Parkir & Payment**  
+   Developer: **Hadid Hamar**  
+   NIM: **102022400126**
+
+3. **Service C - Membership & Voucher**  
+   Developer: **Dinda Juniar**  
+   NIM: **102022400023**
 
 ## Struktur Folder Repositori
 ```
@@ -19,16 +26,21 @@ Tubes-IAE-Kelompok-6/
 ├── docs/                   # Dokumen desain dan arsitektur sistem
 │   ├── architecture.md
 │   └── member-services.md
-└── services/               # Kumpulan kode program service kelompok
-    └── farid-lahan-lokasi/ # Kode Laravel Service A (Farid)
+└── services/
+    ├── farid-lahan-lokasi/
+    ├── hadid-transaksi-parkir/
+    └── dinda-membership-voucher/
 ```
 
 ## Teknologi yang Digunakan
 * **API Gateway**: Nginx
-* **Backend Service A**: Laravel 11, PHP 8.2, MySQL 8.0
-* **SSO & Auth**: JWT (RS256) dari Server SSO Dosen
-* **Audit System**: SOAP XML Web Services
-* **Message Broker**: RabbitMQ (AMQP)
+* **Container Orchestration**: Docker Compose
+* **Service A**: Laravel, PHP, MySQL
+* **Service B**: Laravel, PHP, MySQL, REST + GraphQL
+* **Service C**: Laravel, PHP, MySQL
+* **SSO & Auth**: JWT dari Server SSO Dosen
+* **Audit System**: SOAP XML Web Service
+* **Message Broker**: RabbitMQ via HTTP Publisher Cloud Dosen
 
 ## Cara Menjalankan Project
 
