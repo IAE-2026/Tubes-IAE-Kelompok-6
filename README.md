@@ -5,7 +5,7 @@ Project di dalam sistem ini semua service dihubungkan melalui satu API Gateway (
 ## Pembagian Kerja dan servicenya
 Sistem Smart Parking Kelompok 6 ada 3 service utama:
 1. **Service A (Lahan & Lokasi)** - Oleh **Farid Maulana**.
-2. **Service B (Transaksi Parkir)** - Oleh **Hadid Hamar**.
+2. **Service B (Transaksi Parkir)** - Oleh **Hadid Hamar**..
 3. **Service C (Pembayaran)** - Oleh **Dinda Juniar**.
 
 ## Struktur Folder Repositori
