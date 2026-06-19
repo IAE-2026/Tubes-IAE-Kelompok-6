@@ -93,6 +93,8 @@ services:
       IAE_TEAM_ID: TEAM-06
       IAE_API_KEY: KEY-MHS-185
       IAE_NIM: "102022400126"
+      SERVICE_A_URL: http://smart-parking-service-a-app:3001
+      SERVICE_C_URL: http://smart-parking-service-c-app:8000
       LIGHTHOUSE_SCHEMA_CACHE_ENABLE: "false"
       LIGHTHOUSE_QUERY_CACHE_ENABLE: "false"
     depends_on:
