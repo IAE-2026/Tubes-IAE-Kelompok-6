@@ -8,11 +8,11 @@ This document lists the team structure, service responsibilities, and inter-serv
 
 Our group is split into three service responsibilities, each managed by a dedicated developer:
 
-| Component | Service Name | Responsible Developer | NIM | Platform Tech Stack |
+| Component | Service Name | Responsible Developer | NIM | Tech Stack |
 | --- | --- | --- | --- | --- |
-| **Service A** | **Lahan & Lokasi** | **Farid Maulana** | **102022400039** | Laravel 11, PHP 8.2, MySQL |
-| **Service B** | **Transaksi Parkir** | *Team Member B* | *NIM Member B* | Node.js / Python / Go / PHP |
-| **Service C** | **Pembayaran** | *Team Member C* | *NIM Member C* | Node.js / Python / Go / PHP |
+| Service A | Lahan & Lokasi Parkir | Farid Maulana | 102022400039 | Laravel, PHP, MySQL |
+| Service B | Transaksi Parkir & Payment | Hadid Hamar | 102022400126 | Laravel, PHP, MySQL, REST, GraphQL |
+| Service C | Membership & Voucher | Dinda Juniar | 102022400023 | Laravel, PHP, MySQL |
 
 ---
 
