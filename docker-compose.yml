@@ -1,9 +1,6 @@
-version: '3.8'
+version: "3.8"
 
 services:
-  # ==========================================
-  # API GATEWAY (NGINX)
-  # ==========================================
   api_gateway:
     image: nginx:stable-alpine
     container_name: smart-parking-api-gateway
@@ -14,41 +11,35 @@ services:
       - ./api-gateway/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
       - app_service_a
-      # Once Service B & C are implemented, add their dependencies here:
-      # - app_service_b
-      # - app_service_c
+      - app_service_b
+      - app_service_c
     networks:
       - smart_parking_net
 
-  # ==========================================
-  # 🚗 SERVICE A: LAHAN & LOKASI (Farid Maulana)
-  # ==========================================
   app_service_a:
     build:
       context: ./services/farid-lahan-lokasi
       dockerfile: Dockerfile
     container_name: smart-parking-service-a-app
     restart: unless-stopped
-    ports:
-      - "3001:3001"
+    expose:
+      - "3001"
     environment:
-      - APP_ENV=local
-      - APP_DEBUG=true
-      - APP_KEY=base64:VNO78RgpAR/bPAo+n1hAWXqrrbDey9+V3LRi/sQSBVU=
-      - DB_CONNECTION=mysql
-      - DB_HOST=mysql_db_service_a
-      - DB_PORT=3306
-      - DB_DATABASE=smart_parking_service_a
-      - DB_USERNAME=service_a_user
-      - DB_PASSWORD=service_a_password
-      - SESSION_DRIVER=file
-      - CACHE_STORE=file
-      - QUEUE_CONNECTION=sync
-      - IAE_SSO_URL=https://iae-sso.virtualfri.id
-      - IAE_API_KEY=KEY-MHS-67
-      - IAE_SSO_EMAIL=warga20@ktp.iae.id
-      - IAE_SSO_PASSWORD=KtpDigital2026!
-      - IAE_TEAM_ID=TEAM-06
+      APP_ENV: local
+      APP_DEBUG: "true"
+      DB_CONNECTION: mysql
+      DB_HOST: mysql_db_service_a
+      DB_PORT: 3306
+      DB_DATABASE: smart_parking_service_a
+      DB_USERNAME: service_a_user
+      DB_PASSWORD: service_a_password
+      SESSION_DRIVER: file
+      CACHE_STORE: file
+      QUEUE_CONNECTION: sync
+      IAE_SSO_URL: https://iae-sso.virtualfri.id
+      IAE_API_KEY: KEY-MHS-67
+      IAE_NIM: "102022400039"
+      IAE_TEAM_ID: TEAM-06
     depends_on:
       mysql_db_service_a:
         condition: service_healthy
@@ -59,92 +50,127 @@ services:
     image: mysql:8.0
     container_name: smart-parking-service-a-db
     restart: unless-stopped
-    ports:
-      - "3306:3306"
     environment:
       MYSQL_DATABASE: smart_parking_service_a
       MYSQL_USER: service_a_user
       MYSQL_PASSWORD: service_a_password
-      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_ROOT_PASSWORD: root_password_a
     volumes:
       - db_data_service_a:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-proot_password"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot_password_a"]
       interval: 10s
-      retries: 5
       timeout: 5s
+      retries: 10
     networks:
       - smart_parking_net
 
-  # ==========================================
-  # 📝 SERVICE B: TRANSAKSI (Placeholder)
-  # ==========================================
-  # app_service_b:
-  #   build:
-  #     context: ./services/service-b-transaksi
-  #     dockerfile: Dockerfile
-  #   container_name: smart-parking-service-b-app
-  #   restart: unless-stopped
-  #   ports:
-  #     - "3002:3002"
-  #   environment:
-  #     - APP_ENV=local
-  #     - DB_CONNECTION=mysql
-  #     - DB_HOST=mysql_db_service_b
-  #     - DB_DATABASE=smart_parking_service_b
-  #   depends_on:
-  #     mysql_db_service_b:
-  #       condition: service_healthy
-  #   networks:
-  #     - smart_parking_net
-  #
-  # mysql_db_service_b:
-  #   image: mysql:8.0
-  #   container_name: smart-parking-service-b-db
-  #   environment:
-  #     MYSQL_DATABASE: smart_parking_service_b
-  #     MYSQL_USER: service_b_user
-  #     MYSQL_PASSWORD: service_b_password
-  #     MYSQL_ROOT_PASSWORD: root_password
-  #   volumes:
-  #     - db_data_service_b:/var/lib/mysql
-  #   networks:
-  #     - smart_parking_net
+  app_service_b:
+    build:
+      context: ./services/hadid-transaksi-parkir
+      dockerfile: Dockerfile
+    container_name: smart-parking-service-b-app
+    restart: unless-stopped
+    expose:
+      - "3002"
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://smart-parking-service-b-app:3002
+      PORT: 3002
+      LOG_CHANNEL: stack
+      SESSION_DRIVER: file
+      CACHE_STORE: array
+      DB_CONNECTION: mysql
+      DB_HOST: mysql_db_service_b
+      DB_PORT: 3306
+      DB_DATABASE: service_b
+      DB_USERNAME: service_b
+      DB_PASSWORD: service_b_secret
+      IAE_INTERNAL_KEY: "102022400126"
+      IAE_API_KEYS: "102022400126"
+      IAE_BASE_URL: https://iae-sso.virtualfri.id
+      IAE_TEAM_ID: TEAM-06
+      IAE_API_KEY: KEY-MHS-185
+      IAE_NIM: "102022400126"
+      LIGHTHOUSE_SCHEMA_CACHE_ENABLE: "false"
+      LIGHTHOUSE_QUERY_CACHE_ENABLE: "false"
+    depends_on:
+      mysql_db_service_b:
+        condition: service_healthy
+    networks:
+      - smart_parking_net
 
-  # ==========================================
-  # 💳 SERVICE C: PEMBAYARAN (Placeholder)
-  # ==========================================
-  # app_service_c:
-  #   build:
-  #     context: ./services/service-c-pembayaran
-  #     dockerfile: Dockerfile
-  #   container_name: smart-parking-service-c-app
-  #   restart: unless-stopped
-  #   ports:
-  #     - "3003:3003"
-  #   environment:
-  #     - APP_ENV=local
-  #     - DB_CONNECTION=mysql
-  #     - DB_HOST=mysql_db_service_c
-  #     - DB_DATABASE=smart_parking_service_c
-  #   depends_on:
-  #     mysql_db_service_c:
-  #       condition: service_healthy
-  #   networks:
-  #     - smart_parking_net
-  #
-  # mysql_db_service_c:
-  #   image: mysql:8.0
-  #   container_name: smart-parking-service-c-db
-  #   environment:
-  #     MYSQL_DATABASE: smart_parking_service_c
-  #     MYSQL_USER: service_c_user
-  #     MYSQL_PASSWORD: service_c_password
-  #     MYSQL_ROOT_PASSWORD: root_password
-  #   volumes:
-  #     - db_data_service_c:/var/lib/mysql
-  #   networks:
-  #     - smart_parking_net
+  mysql_db_service_b:
+    image: mysql:8.0
+    container_name: smart-parking-service-b-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: service_b
+      MYSQL_USER: service_b
+      MYSQL_PASSWORD: service_b_secret
+      MYSQL_ROOT_PASSWORD: root_password_b
+    volumes:
+      - db_data_service_b:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot_password_b"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - smart_parking_net
+
+  app_service_c:
+    build:
+      context: ./services/dinda-membership-voucher
+      dockerfile: Dockerfile
+    container_name: smart-parking-service-c-app
+    restart: unless-stopped
+    expose:
+      - "8000"
+    environment:
+      APP_NAME: "Service C - Membership & Voucher"
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://smart-parking-service-c-app:8000
+      LOG_CHANNEL: stderr
+      DB_CONNECTION: mysql
+      DB_HOST: mysql_db_service_c
+      DB_PORT: 3306
+      DB_DATABASE: smart_parking
+      DB_USERNAME: root
+      DB_PASSWORD: secret
+      SESSION_DRIVER: file
+      CACHE_STORE: file
+      IAE_API_KEYS: "102022400023"
+      IAE_BASE_URL: https://iae-sso.virtualfri.id
+      IAE_SSO_URL: https://iae-sso.virtualfri.id
+      IAE_API_KEY: KEY-MHS-45
+      IAE_NIM: "102022400023"
+      IAE_TEAM_ID: TEAM-06
+      L5_SWAGGER_GENERATE_ALWAYS: "true"
+    depends_on:
+      mysql_db_service_c:
+        condition: service_healthy
+    networks:
+      - smart_parking_net
+
+  mysql_db_service_c:
+    image: mysql:8.0
+    container_name: smart-parking-service-c-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_DATABASE: smart_parking
+    volumes:
+      - db_data_service_c:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-psecret"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - smart_parking_net
 
 networks:
   smart_parking_net:
@@ -152,8 +178,5 @@ networks:
 
 volumes:
   db_data_service_a:
-    driver: local
-  # db_data_service_b:
-  #   driver: local
-  # db_data_service_c:
-  #   driver: local
+  db_data_service_b:
+  db_data_service_c:
