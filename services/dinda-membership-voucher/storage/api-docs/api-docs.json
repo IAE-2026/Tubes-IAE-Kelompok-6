@@ -1,0 +1,200 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Service C - API Keanggotaan & Voucher",
+        "description": "Service Smart Parking untuk mengelola data keanggotaan dan voucher parkir.",
+        "version": "1.0.0"
+    },
+    "paths": {
+        "/api/v1/memberships": {
+            "get": {
+                "tags": [
+                    "Keanggotaan"
+                ],
+                "summary": "Melihat daftar seluruh member",
+                "operationId": "eaf4ebb907ef7726f6f19c8fdda52d5e",
+                "responses": {
+                    "200": {
+                        "description": "Data berhasil diambil"
+                    },
+                    "401": {
+                        "description": "Tidak terotorisasi"
+                    },
+                    "403": {
+                        "description": "Akses ditolak"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Keanggotaan"
+                ],
+                "summary": "Mendaftarkan member baru",
+                "operationId": "f3d5a078dd21f5146d6cddaf5838cc8e",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "email",
+                                    "phone",
+                                    "membership_type"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Rani Putri"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "example": "rani@mail.com"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "081234567899"
+                                    },
+                                    "membership_type": {
+                                        "type": "string",
+                                        "example": "perak",
+                                        "enum": [
+                                            "perunggu",
+                                            "perak",
+                                            "emas",
+                                            "platina"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Anggota berhasil didaftarkan"
+                    },
+                    "400": {
+                        "description": "Validasi gagal"
+                    },
+                    "401": {
+                        "description": "Tidak terotorisasi"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/memberships/{id}": {
+            "get": {
+                "tags": [
+                    "Keanggotaan"
+                ],
+                "summary": "Mengecek detail dan status aktif seorang member",
+                "operationId": "cb9af727af4ffaafb8d1edd379452f00",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Member code (contoh: MEM001)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "MEM001"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Data berhasil diambil"
+                    },
+                    "404": {
+                        "description": "Anggota tidak ditemukan"
+                    },
+                    "401": {
+                        "description": "Tidak terotorisasi"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "Membership": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "member_code": {
+                        "type": "string",
+                        "example": "MEM001"
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Budi Santoso"
+                    },
+                    "email": {
+                        "type": "string",
+                        "example": "budi@mail.com"
+                    },
+                    "phone": {
+                        "type": "string",
+                        "example": "081234567890"
+                    },
+                    "membership_type": {
+                        "type": "string",
+                        "example": "emas",
+                        "enum": [
+                            "perunggu",
+                            "perak",
+                            "emas",
+                            "platina"
+                        ]
+                    },
+                    "status": {
+                        "type": "string",
+                        "example": "aktif",
+                        "enum": [
+                            "aktif",
+                            "kedaluwarsa"
+                        ]
+                    },
+                    "discount_percent": {
+                        "type": "integer",
+                        "example": 20
+                    },
+                    "registered_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "expired_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Keanggotaan",
+            "description": "Keanggotaan"
+        }
+    ]
+}

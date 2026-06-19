@@ -1,0 +1,48 @@
+"A date string with format `Y-m-d H:i:s`, e.g. `2026-01-10 08:00:00`."
+scalar DateTime @scalar(class: "Nuwave\\Lighthouse\\Schema\\Types\\Scalars\\DateTime")
+
+type MembershipUsage {
+    id: ID!
+    transaction_id: String
+    voucher_code: String
+    used_at: DateTime
+}
+
+type Membership {
+    id: ID!
+    member_code: String!
+    name: String!
+    email: String!
+    phone: String!
+    membership_type: String!
+    status: String!
+    discount_percent: Int!
+    registered_at: DateTime
+    expired_at: DateTime
+    usage_history: [MembershipUsage!]! @hasMany(relation: "usageHistory")
+}
+
+type Voucher {
+    id: ID!
+    code: String!
+    description: String!
+    discount_type: String!
+    discount_value: Float!
+    max_discount: Float!
+    is_used: Boolean!
+    valid_until: DateTime
+}
+
+type Query {
+    "Mengambil daftar seluruh member."
+    memberships: [Membership!]! @all
+
+    "Mengambil detail satu member berdasarkan member_code."
+    membership(member_code: String! @eq): Membership @find
+
+    "Mengambil daftar seluruh voucher."
+    vouchers: [Voucher!]! @all
+
+    "Mengambil detail satu voucher berdasarkan kode."
+    voucher(code: String! @eq): Voucher @find
+}

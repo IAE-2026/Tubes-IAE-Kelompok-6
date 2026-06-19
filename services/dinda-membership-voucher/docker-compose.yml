@@ -1,0 +1,52 @@
+services:
+  app:
+    build: .
+    container_name: service-c-app
+    ports:
+      - "8000:8000"
+    environment:
+      APP_NAME: "Service C - Keanggotaan & Voucher"
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8000
+      LOG_CHANNEL: stderr
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: smart_parking
+      DB_USERNAME: root
+      DB_PASSWORD: secret
+      SESSION_DRIVER: file
+      CACHE_STORE: file
+      IAE_API_KEYS: "102022400023"
+      L5_SWAGGER_GENERATE_ALWAYS: "true"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - service-c-net
+
+  mysql:
+    image: mysql:8.0
+    container_name: service-c-mysql
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_DATABASE: smart_parking
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - service-c-net
+
+volumes:
+  mysql_data:
+
+networks:
+  service-c-net:
+    driver: bridge
