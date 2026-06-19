@@ -58,7 +58,16 @@ services:
     volumes:
       - db_data_service_a:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot_password_a"]
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-uroot",
+          "-proot_password_a",
+        ]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -115,7 +124,16 @@ services:
     volumes:
       - db_data_service_b:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot_password_b"]
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-uroot",
+          "-proot_password_b",
+        ]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -167,7 +185,8 @@ services:
     volumes:
       - db_data_service_c:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-psecret"]
+      test:
+        ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-psecret"]
       interval: 10s
       timeout: 5s
       retries: 10

@@ -1,111 +1,167 @@
-# 👥 Team & Member Services Agreement - Kelompok 6 / TEAM-06
+# Team dan Service Kelompok 6
 
-This document lists the team structure, service responsibilities, and inter-service API contracts within the **Smart Parking System**.
+Dokumen ini menjelaskan pembagian service, batas tanggung jawab, dan kontrak integrasi antar-service pada sistem Smart Parking TEAM-06.
 
----
+## Mapping Anggota
 
-## 📋 Team Mapping
-
-Our group is split into three service responsibilities, each managed by a dedicated developer:
-
-| Component | Service Name | Responsible Developer | NIM | Tech Stack |
+| Komponen | Service | Developer | NIM | Teknologi |
 | --- | --- | --- | --- | --- |
-| Service A | Lahan & Lokasi Parkir | Farid Maulana | 102022400039 | Laravel, PHP, MySQL |
-| Service B | Transaksi Parkir & Payment | Hadid Hamar | 102022400126 | Laravel, PHP, MySQL, REST, GraphQL |
-| Service C | Membership & Voucher | Dinda Juniar | 102022400023 | Laravel, PHP, MySQL |
+| Service A | Lahan dan Lokasi Parkir | Farid Maulana | 102022400039 | Laravel, PHP, MySQL |
+| Service B | Transaksi Parkir dan Payment | Hadid Hamar | 102022400126 | Laravel, PHP, MySQL, REST, GraphQL |
+| Service C | Membership dan Voucher | Dinda Juniar | 102022400023 | Laravel, PHP, MySQL |
 
----
+## Service A - Lahan dan Lokasi Parkir
 
-## 🛠️ Service Definitions & Boundaries
+Service A mengelola data lokasi parkir. Service ini menyimpan nama lokasi, alamat, jenis parkir, jumlah slot, slot tersedia, dan tarif dasar.
 
-### 🚗 Service A: Lahan & Lokasi (Farid Maulana)
-* **Responsibility**: Manages the static master records of parking spots. This includes adding new buildings, setting base fees, mapping addresses, and maintaining total capacity constraints.
-* **Internal Docker Hostname**: `smart-parking-service-a-app`
-* **Exposed Port (Docker internal)**: `3001`
-* **Key Database Tables**: `locations`, `roles`, `audit_receipts`
+Detail teknis:
 
----
+- Folder: services/farid-lahan-lokasi
+- Docker hostname: smart-parking-service-a-app
+- Port internal: 3001
+- Database: smart_parking_service_a
+- Tabel utama: locations, roles, audit_receipts
+- Endpoint utama: /api/v1/locations
+- Auth: Bearer JWT dari SSO dosen
 
-### 📝 Service B: Transaksi Parkir (Placeholder)
-* **Responsibility**: Tracks parking check-ins and check-outs. When a vehicle enters, Service B starts a session and decrements the `available_spots` for that location. When the vehicle exits, it computes duration and marks the spot as available.
-* **Internal Docker Hostname**: `smart-parking-service-b-app`
-* **Exposed Port (Docker internal)**: `3002`
-* **Inter-Service Dependency**: Service B calls Service A's `GET /api/v1/locations/{id}` to verify the location exists, check its type (VIP vs. regular), and fetch the capacity limit and base rate.
+Tugas integrasi:
 
----
+- Memvalidasi JWT lewat JWKS SSO dosen.
+- Mengambil token M2M dengan api_key dan nim 102022400039.
+- Mengirim SOAP Audit saat data lokasi dibuat.
+- Mempublish event location.created ke RabbitMQ publisher dosen.
+- Menyediakan endpoint occupy dan release untuk update slot.
 
-### 💳 Service C: Pembayaran (Placeholder)
-* **Responsibility**: Handles invoicing, digital wallets/cashless integration, and payment receipt storage. Once paid, it alerts Service B to conclude the parking session.
-* **Internal Docker Hostname**: `smart-parking-service-c-app`
-* **Exposed Port (Docker internal)**: `3003`
-* **Inter-Service Dependency**: Service C calls Service B to retrieve active session costs and durations. Once payment completes, it triggers a `payment.completed` event via AMQP.
+## Service B - Transaksi Parkir dan Payment
 
----
+Service B mengelola alur transaksi parkir. Service ini menangani check-in, checkout, perhitungan biaya, benefit membership, dan payment.
 
-## 🤝 Inter-Service API Contract
+Detail teknis:
 
-Below is the agreed communication protocol between services:
+- Folder: services/hadid-transaksi-parkir
+- Docker hostname: smart-parking-service-b-app
+- Port internal: 3002
+- Database: service_b
+- Tabel utama: transactions, users, roles, audit_logs
+- Endpoint utama: /api/v1/transactions
+- Endpoint GraphQL: /graphql dan /graphiql
+- Auth internal: X-IAE-KEY 102022400126
 
-```mermaid
+Tugas integrasi:
+
+- Memanggil Service A lewat SERVICE_A_URL untuk membaca lokasi.
+- Memanggil Service A untuk mengurangi slot saat check-in.
+- Memanggil Service A untuk mengembalikan slot saat payment selesai.
+- Memanggil Service C lewat SERVICE_C_URL untuk membaca membership.
+- Mengambil token M2M dengan api_key dan nim 102022400126 saat memanggil service yang butuh Bearer JWT.
+
+## Service C - Membership dan Voucher
+
+Service C mengelola data membership dan voucher. Service ini memberi data diskon yang dipakai Service B saat checkout transaksi.
+
+Detail teknis:
+
+- Folder: services/dinda-membership-voucher
+- Docker hostname: smart-parking-service-c-app
+- Port internal: 8000
+- Database: smart_parking
+- Tabel utama: memberships, vouchers, membership_usages
+- Endpoint utama: /api/v1/memberships
+- Auth: Bearer JWT dari SSO dosen
+
+Tugas integrasi:
+
+- Memvalidasi JWT lewat JWKS SSO dosen.
+- Mengambil token M2M dengan api_key dan nim 102022400023.
+- Mengirim SOAP Audit saat membership dibuat.
+- Mempublish event membership.created ke RabbitMQ publisher dosen.
+- Menyediakan data membership untuk Service B.
+
+## Kontrak Komunikasi Antar-Service
+
+Alur check-in transaksi:
+
+1. Client mengirim POST /api/v1/transactions ke API Gateway.
+2. Gateway meneruskan request ke Service B.
+3. Service B membaca lokasi ke Service A lewat GET /api/v1/locations/{id}.
+4. Service B membaca membership ke Service C lewat GET /api/v1/memberships/{member_code}.
+5. Service B memanggil Service A untuk occupy slot.
+6. Service B membuat transaksi dengan status BERLANGSUNG.
+
+Alur checkout dan payment:
+
+1. Client mengirim POST /api/v1/transactions/{id}/checkout.
+2. Service B mengambil tarif dasar dari Service A.
+3. Service B mengambil diskon membership dari Service C.
+4. Service B menghitung total bayar.
+5. Client mengirim POST /api/v1/transactions/{id}/pay.
+6. Service B mengubah status transaksi menjadi SELESAI.
+7. Service B memanggil Service A untuk release slot.
+
+## Mermaid Flow
+
+~~~mermaid
 sequenceDiagram
     autonumber
     actor Client
-    participant Gateway as Nginx Gateway
-    participant ServB as Service B (Transaksi)
-    participant ServA as Service A (Lahan & Lokasi)
-    participant ServC as Service C (Pembayaran)
+    participant Gateway as API Gateway
+    participant B as Service B Transaksi
+    participant A as Service A Lokasi
+    participant C as Service C Membership
+    participant SSO as SSO Dosen
+    participant SOAP as SOAP Audit
+    participant MQ as RabbitMQ Publisher
 
-    Client->>Gateway: POST /api/v1/transactions/check-in
-    Gateway->>ServB: forward request
-    Note over ServB: Validate check-in request
-    
-    ServB->>ServA: GET /api/v1/locations/{location_id}
-    Note over ServA: Retrieve location details & base rate
-    ServA-->>ServB: return 200 OK (location data)
-    
-    Note over ServB: Create booking session & decrement spot
-    ServB-->>Gateway: return 201 Created (session_id)
-    Gateway-->>Client: return response
+    Client->>Gateway: POST /api/v1/locations
+    Gateway->>A: Forward request
+    A->>SSO: POST /api/v1/auth/token api_key + nim
+    SSO-->>A: M2M JWT
+    A->>SOAP: Send audit log
+    SOAP-->>A: ReceiptNumber
+    A->>MQ: Publish location.created
+    A-->>Gateway: Location created
 
-    Client->>Gateway: POST /api/v1/payments/pay
-    Gateway->>ServC: forward request
-    ServC->>ServB: GET /api/v1/transactions/{session_id}
-    ServB-->>ServC: return session details & total cost
-    Note over ServC: Execute payment process
-    ServC-->>Gateway: return 200 OK (payment receipt)
-    Gateway-->>Client: return response
-```
+    Client->>Gateway: POST /api/v1/transactions
+    Gateway->>B: Forward request
+    B->>A: GET /api/v1/locations/{id}
+    A-->>B: Location data
+    B->>C: GET /api/v1/memberships/{member_code}
+    C-->>B: Membership data
+    B->>A: POST /api/v1/locations/{id}/occupy
+    B-->>Gateway: Transaction created
 
-### 📡 Standardized JSON Response Scheme
-All services in Kelompok 6 agree to return JSON responses following this metadata wrapper scheme:
+    Client->>Gateway: POST /api/v1/transactions/{id}/checkout
+    Gateway->>B: Forward request
+    B-->>Gateway: Total amount
 
-#### Success Response (e.g., HTTP 200/201)
-```json
+    Client->>Gateway: POST /api/v1/transactions/{id}/pay
+    Gateway->>B: Forward request
+    B->>A: POST /api/v1/locations/{id}/release
+    B-->>Gateway: Status SELESAI
+~~~
+
+## Standar Response JSON
+
+Response sukses:
+
+~~~json
 {
   "status": "success",
-  "message": "Data retrieved successfully",
-  "data": {
-    "key": "value"
-  },
+  "message": "Data berhasil diambil",
+  "data": {},
   "meta": {
-    "service_name": "Lahan-Lokasi-Service",
+    "service_name": "Nama-Service",
     "api_version": "v1"
   }
 }
-```
+~~~
 
-#### Error Response (e.g., HTTP 400/401/404/500)
-```json
+Response error:
+
+~~~json
 {
   "status": "error",
-  "message": "Detailed error message here",
-  "errors": [
-    "Validation rule X failed",
-    "Database constraint violation"
-  ],
-  "meta": {
-    "service_name": "Lahan-Lokasi-Service",
-    "api_version": "v1"
-  }
+  "message": "Pesan error",
+  "errors": null
 }
-```
+~~~

@@ -1,97 +1,175 @@
-# 🏗️ System Architecture - Kelompok 6 / TEAM-06
+# Arsitektur Sistem Kelompok 6
 
-This document describes the technical architecture and request integration flow for the **Smart Parking System**.
+Dokumen ini menjelaskan arsitektur integrasi Smart Parking TEAM-06. Fokusnya ada pada API Gateway, komunikasi antar-service, dan integrasi dengan infrastruktur dosen.
 
----
+## Komponen Utama
 
-## 🗺️ High-Level Component Architecture
+Sistem terdiri dari enam bagian:
 
-The system consists of three main groups:
-1. **API Gateway (Nginx)**: The single ingress controller for all client requests.
-2. **Internal Microservices**: Backend business services (Service A, B, C) running in isolated Docker containers.
-3. **External Central Infrastructure**: Cloud systems provided by lecturers (SSO server, SOAP audit log database, RabbitMQ message broker).
+1. Client atau Postman.
+2. API Gateway Nginx.
+3. Service A untuk lokasi parkir.
+4. Service B untuk transaksi dan payment.
+5. Service C untuk membership dan voucher.
+6. Infrastruktur dosen untuk SSO, SOAP Audit, dan RabbitMQ.
 
-```mermaid
+## Diagram Komponen
+
+~~~mermaid
 graph TD
-    Client[Client / Postman] -->|HTTP Port 80| Nginx[API Gateway - Nginx]
-    
-    subgraph Local Container Network (smart_parking_net)
-       Nginx -->|Proxy Pass| ServA[Service A: Lahan & Lokasi]
-        Nginx -->|Proxy Pass| ServB[Service B: Transaksi Parkir & Payment]
-        Nginx -->|Proxy Pass| ServC[Service C: Membership & Voucher]
-        
-        ServA -->|TCP 3306| DBA[(Service A MySQL DB)]
-        ServB -.-> DBB[(Service B DB)]
-        ServC -.-> DBC[(Service C DB)]
+    Client[Client atau Postman] -->|HTTP port 80| Gateway[API Gateway Nginx]
+
+    subgraph DockerNetwork[Docker network smart_parking_net]
+        Gateway -->|/api/v1/locations| A[Service A Lahan dan Lokasi]
+        Gateway -->|/api/v1/transactions| B[Service B Transaksi dan Payment]
+        Gateway -->|/api/v1/memberships| C[Service C Membership dan Voucher]
+
+        A --> DBA[(MySQL Service A)]
+        B --> DBB[(MySQL Service B)]
+        C --> DBC[(MySQL Service C)]
+
+        B -->|GET lokasi dan update slot| A
+        B -->|GET membership| C
     end
 
-    subgraph External Central Cloud (Dosen Infrastructure)
-        SSO[SSO Cloud Server - JWKS]
-        SOAP[Legacy SOAP Audit Server]
-        RMQ[RabbitMQ Broker]
+    subgraph CloudDosen[Infrastruktur Dosen]
+        SSO[SSO JWT dan JWKS]
+        SOAP[SOAP Audit]
+        MQ[RabbitMQ Publisher]
     end
 
-    ServA -->|1. Validate JWT via JWKS| SSO
-    ServA -->|2. Send Transaction Envelope| SOAP
-    ServA -->|3. Publish location.created JSON| RMQ
-```
+    A -->|M2M token api_key + nim| SSO
+    A -->|Audit lokasi| SOAP
+    A -->|Publish location.created| MQ
 
----
+    B -->|M2M token api_key + nim| SSO
+    C -->|M2M token api_key + nim| SSO
+    C -->|Audit membership| SOAP
+    C -->|Publish membership.created| MQ
+~~~
 
-## 🛡️ Routing and Security (API Gateway)
+## Aturan Gateway
 
-No backend container (such as Laravel app, MySQL database) is directly accessible from the internet. All incoming traffic must pass through the **Nginx API Gateway**:
-* **Port Exposure**: Only port `80` (HTTP) is mapped on the host machine.
-* **Routing Rules**:
-* `/api/v1/locations` -> Service A Farid
-* `/api/v1/sso` -> Service A Farid
-* `/api/v1/transactions` -> Service B Hadid
-* `/graphql` dan `/graphiql` -> Service B Hadid
-* `/api/v1/memberships` -> Service C Dinda
-* `/api/sso` -> Service C Dinda
-* **Header Enrichment**: Nginx acts as a reverse proxy, forwarding client headers (`Host`, `X-Real-IP`, `X-Forwarded-For`, `Authorization`) to downstream services to ensure JWT signatures and IPs can be processed accurately.
+Client hanya mengakses API lewat http://localhost. Container service tidak membuka port langsung ke host.
 
----
+Routing gateway:
 
-## 🔗 Central Infrastructure Compliance Flow
+- /api/v1/locations ke Service A.
+- /api/v1/sso ke Service A.
+- /api/v1/transactions ke Service B.
+- /graphql ke Service B.
+- /graphiql ke Service B.
+- /api/v1/memberships ke Service C.
+- /api/sso ke Service C.
 
-Every state-changing transaction in our services (such as registering a new parking location in Service A) triggers a three-step orchestration process:
+Gateway meneruskan header penting:
 
-### 1. Federated SSO Validation (JWT)
-* Clients authenticate via the central SSO server: `POST /api/v1/auth/token` with credentials (Email/Password or API Key).
-* Clients send requests to local services with a `Authorization: Bearer <JWT>` header.
-* Local services intercept this request using a custom SSO middleware. The middleware fetches the JSON Web Key Set (JWKS) public keys from the central SSO server (`/api/v1/auth/jwks` or `/.well-known/jwks.json`), caches it for 1 hour, and verifies the JWT signature (RS256).
-* The user's identity is extracted from the JWT payload and mapped to the local `roles` table.
+- Authorization
+- X-IAE-KEY
+- Host
+- X-Real-IP
+- X-Forwarded-For
+- X-Forwarded-Proto
 
-### 2. Legacy SOAP XML Audit
-* Upon validating the transaction payload, the service wraps details into a strict SOAP XML envelope:
-  ```xml
-  <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:iae="http://iae.virtualfri.id">
-     <soapenv:Header/>
-     <soapenv:Body>
-        <iae:AuditRequest>
-           <iae:TeamID>TEAM-06</iae:TeamID>
-           <iae:ActivityName>LocationCreated</iae:ActivityName>
-           <iae:LogContent><![CDATA[{"location_id":"loc_001",...}]]></iae:LogContent>
-        </iae:AuditRequest>
-     </soapenv:Body>
-  </soapenv:Envelope>
-  ```
-* The payload is dispatched to `https://iae-sso.virtualfri.id/soap/v1/audit` with headers `Content-Type: text/xml` and `SOAPAction: audit`.
-* The server responds with an audit status and a `ReceiptNumber` which is parsed and saved locally as audit proof.
+## Penggunaan SOAP
 
-### 3. AMQP Event Broadcasting & Consumption (RabbitMQ)
-* **Event Broadcasting (Publishing)**:
-  * After obtaining the `ReceiptNumber`, the service notifies other microservices asynchronously.
-  * An AMQP event publisher dispatches a JSON message to RabbitMQ:
-    * **Endpoint**: `https://iae-sso.virtualfri.id/api/v1/messages/publish` (or direct AMQP connection)
-    * **Routing Key**: `location.created`
-    * **Payload**: Includes database record fields + the retrieved `ReceiptNumber`.
-  * This triggers real-time updates across the dashboard and other listening services (e.g. Service B knows that a new location is available for bookings).
-* **Event Consumption**:
-  * Service A runs a background consumer command (`php artisan rabbitmq:consume`) to listen to the exchange `iae.central.exchange` (topic type) via the queue `team06_smart_parking_queue`.
-  * Service A processes three incoming integration events to dynamically adjust slots:
-    * `parking.slot.occupied` $\rightarrow$ Decrements `available_spots` for the specified location.
-    * `parking.slot.released` $\rightarrow$ Increments `available_spots` for the specified location.
-    * `parking.payment.completed` $\rightarrow$ Triggers the release of the occupied parking spot, incrementing `available_spots`.
-  * For stateless deployments, Service A also provides a webhook simulation endpoint `POST /api/v1/events/rabbitmq-callback` which mirrors the consumer's business logic.
+SOAP dipakai untuk audit transaksi penting. Pola ini cocok karena audit butuh format kontrak yang jelas dan bukti receipt.
+
+Service yang memakai SOAP:
+
+- Service A saat membuat lokasi baru.
+- Service C saat membuat membership baru.
+
+Contoh bukti hasil test lokal:
+
+~~~json
+{
+  "receipt_number": "IAE-LOG-2026-A4C6D4B1"
+}
+~~~
+
+## Penggunaan RabbitMQ
+
+RabbitMQ dipakai untuk event yang tidak harus memblokir response utama. Service tetap bisa memberi response walau event publisher sedang lambat.
+
+Event yang dikirim:
+
+- location.created dari Service A.
+- membership.created dari Service C.
+- event payment dapat dikembangkan dari Service B.
+
+Publisher memakai endpoint cloud dosen:
+
+~~~text
+https://iae-sso.virtualfri.id/api/v1/messages/publish
+~~~
+
+## Alur SSO M2M
+
+Dosen mewajibkan field nim pada request token M2M. Semua service sudah mengikuti format ini.
+
+Contoh request:
+
+~~~json
+{
+  "api_key": "KEY-MHS-67",
+  "nim": "102022400039"
+}
+~~~
+
+Mapping NIM:
+
+- Farid: 102022400039
+- Hadid: 102022400126
+- Dinda: 102022400023
+
+## Alur End-to-End yang Diuji
+
+1. Client membuat lokasi baru ke Service A lewat gateway.
+2. Service A mengambil token M2M dari SSO dosen.
+3. Service A mengirim SOAP Audit dan menerima receipt number.
+4. Service A publish event location.created.
+5. Client membuat transaksi ke Service B dengan location_id dari Service A.
+6. Service B membaca lokasi dari Service A.
+7. Service B membaca membership dari Service C.
+8. Service B membuat transaksi dengan status BERLANGSUNG.
+9. Client melakukan checkout.
+10. Service B menghitung biaya dari base_rate Service A dan diskon Service C.
+11. Client melakukan payment.
+12. Service B mengubah status transaksi menjadi SELESAI.
+13. Service B memanggil Service A untuk release slot.
+
+Contoh hasil test lokal:
+
+~~~json
+{
+  "id": "trx_006",
+  "location_id": "loc_004",
+  "member_card_id": "MEM001",
+  "base_rate": 4000,
+  "benefit": 800,
+  "total_amount": 3200,
+  "status": "SELESAI",
+  "payment_method": "qris"
+}
+~~~
+
+## Bukti Kesesuaian Rubrik
+
+API Gateway dan routing hub:
+
+- Semua request eksternal masuk lewat Nginx.
+- Service internal tidak diekspos langsung ke host.
+- Gateway meneruskan route ke Service A, B, dan C.
+
+End-to-end core business flow:
+
+- Service B memanggil Service A untuk lokasi dan slot.
+- Service B memanggil Service C untuk membership dan diskon.
+- Checkout dan payment berjalan sampai status SELESAI.
+
+Central infrastructure compliance:
+
+- Token SSO M2M mengirim api_key dan nim.
+- SOAP Audit menghasilkan receipt number.
+- RabbitMQ publisher menerima event dari service.
