@@ -1,0 +1,15 @@
+type Location {
+    id: ID!
+    name: String!
+    address: String!
+    type: String!
+    parking_type: String!
+    total_spots: Int!
+    available_spots: Int!
+    base_rate: Int!
+}
+
+type Query {
+    locations: [Location!]! @all
+    location(id: ID! @eq): Location @find
+}

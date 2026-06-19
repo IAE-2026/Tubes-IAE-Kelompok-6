@@ -1,0 +1,157 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Service A - Lahan & Lokasi API",
+        "description": "Dokumentasi API Terintegrasi untuk Manajemen Lahan dan Slot Parkir",
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "http://127.0.0.1:3001/api/v1",
+            "description": "Docker Server"
+        },
+        {
+            "url": "http://127.0.0.1:8000/api/v1",
+            "description": "Local Development Server"
+        }
+    ],
+    "paths": {
+        "/locations": {
+            "get": {
+                "tags": [
+                    "Locations"
+                ],
+                "summary": "Melihat daftar lokasi parkir",
+                "operationId": "getLocationsList",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Locations"
+                ],
+                "summary": "Menambahkan master data lahan baru",
+                "operationId": "storeLocation",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "address",
+                                    "type",
+                                    "parking_type",
+                                    "total_spots",
+                                    "base_rate"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Gedung Kuliah Umum Parkir"
+                                    },
+                                    "address": {
+                                        "type": "string",
+                                        "example": "Jl. Telekomunikasi No. 1, Bandung"
+                                    },
+                                    "type": {
+                                        "type": "string",
+                                        "example": "indoor"
+                                    },
+                                    "parking_type": {
+                                        "type": "string",
+                                        "example": "regular"
+                                    },
+                                    "total_spots": {
+                                        "type": "integer",
+                                        "example": 100
+                                    },
+                                    "base_rate": {
+                                        "type": "integer",
+                                        "example": 3000
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Resource created successfully"
+                    },
+                    "400": {
+                        "description": "Validation Error"
+                    }
+                },
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ]
+            }
+        },
+        "/locations/{id}": {
+            "get": {
+                "tags": [
+                    "Locations"
+                ],
+                "summary": "Melihat detail satu lokasi",
+                "operationId": "getLocationById",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    },
+                    "404": {
+                        "description": "Resource not found"
+                    }
+                },
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ]
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "ApiKeyAuth": {
+                "type": "apiKey",
+                "description": "Masukkan NIM Anda (102022400039) untuk mengakses layanan",
+                "name": "X-IAE-KEY",
+                "in": "header"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Locations",
+            "description": "Locations"
+        }
+    ]
+}

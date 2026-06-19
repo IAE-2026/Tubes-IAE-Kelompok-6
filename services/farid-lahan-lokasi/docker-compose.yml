@@ -1,0 +1,61 @@
+services:
+  app_service_a:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: smart-parking-service-a-app
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - APP_KEY=base64:VNO78RgpAR/bPAo+n1hAWXqrrbDey9+V3LRi/sQSBVU=
+      - DB_CONNECTION=mysql
+      - DB_HOST=mysql_db_service_a
+      - DB_PORT=3306
+      - DB_DATABASE=smart_parking_service_a
+      - DB_USERNAME=service_a_user
+      - DB_PASSWORD=service_a_password
+      - SESSION_DRIVER=file
+      - CACHE_STORE=file
+      - QUEUE_CONNECTION=sync
+      - IAE_SSO_URL=https://iae-sso.virtualfri.id
+      - IAE_API_KEY=KEY-MHS-67
+      - IAE_SSO_EMAIL=warga20@ktp.iae.id
+      - IAE_SSO_PASSWORD=KtpDigital2026!
+      - IAE_TEAM_ID=TEAM-06
+    depends_on:
+      mysql_db_service_a:
+        condition: service_healthy
+    networks:
+      - smart_parking_net
+
+  mysql_db_service_a:
+    image: mysql:8.0
+    container_name: smart-parking-service-a-db
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: smart_parking_service_a
+      MYSQL_USER: service_a_user
+      MYSQL_PASSWORD: service_a_password
+      MYSQL_ROOT_PASSWORD: root_password
+    volumes:
+      - db_data_service_a:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-proot_password"]
+      interval: 10s
+      retries: 5
+      timeout: 5s
+    networks:
+      - smart_parking_net
+
+networks:
+  smart_parking_net:
+    driver: bridge
+
+volumes:
+  db_data_service_a:
+    driver: local
