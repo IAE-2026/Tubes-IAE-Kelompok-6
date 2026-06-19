@@ -220,17 +220,16 @@ curl.exe http://localhost/api/v1/transactions -H "X-IAE-KEY: 102022400126"
 6. Service B menyelesaikan payment.
 7. Status transaksi berubah menjadi SELESAI.
 
-## Bukti yang Perlu Ditunjukkan Saat Demo
+## Cek Singkat Project
 
-- docker compose ps menampilkan semua container Up.
-- GET http://localhost/ menampilkan status gateway TEAM-06.
-- POST /api/v1/locations menghasilkan receipt_number dari SOAP Audit.
-- GET /api/v1/memberships memicu integrasi event dari Service C.
-- Log Service C menampilkan status publish sukses.
-- POST /api/v1/transactions memakai location_id dari Service A.
-- Checkout memakai base_rate dari Service A.
-- Payment menghasilkan status SELESAI.
-- GET /api/v1/memberships menampilkan data membership dari Service C.
+Gunakan bagian ini untuk memastikan project berjalan di perangkat kamu.
+
+- Semua container berjalan lewat Docker Compose.
+- API Gateway bisa diakses lewat `http://localhost/`.
+- Service lokasi, transaksi, dan membership bisa diakses lewat gateway.
+- Token SSO M2M berhasil didapat dengan `api_key` dan `nim`.
+- Flow utama berjalan dari lokasi parkir, transaksi masuk, checkout, sampai payment selesai.
+- Integrasi pusat berjalan saat service menjalankan audit dan mengirim event.
 
 ## Catatan Kontribusi
 
