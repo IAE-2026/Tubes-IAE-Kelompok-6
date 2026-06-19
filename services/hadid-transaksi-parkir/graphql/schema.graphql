@@ -1,0 +1,134 @@
+"""
+Tugas 3 IAE - Smart Parking: Service B Transaksi & Pembayaran.
+API GraphQL (Lighthouse) yang terintegrasi dengan tiga sistem terpusat dosen:
+SSO (Modul 1), SOAP Audit (Modul 2), dan RabbitMQ (Modul 3).
+
+Waktu (ISO-8601) direpresentasikan sebagai String agar bebas dependensi scalar.
+"""
+
+type Query {
+    "Health check service lokal + status koneksi ke pusat dosen."
+    health: HealthStatus! @field(resolver: "App\\GraphQL\\Queries\\HealthQuery")
+
+    "Identitas SSO terverifikasi pada request ini beserta role lokal hasil pemetaan (Modul 1)."
+    me: SsoIdentity! @field(resolver: "App\\GraphQL\\Queries\\MeQuery")
+
+    "Daftar seluruh transaksi parkir."
+    transactions: [Transaction!]! @field(resolver: "App\\GraphQL\\Queries\\TransactionsQuery")
+
+    "Detail satu transaksi parkir."
+    transaction(id: ID!): Transaction @field(resolver: "App\\GraphQL\\Queries\\TransactionQuery")
+
+    "Jejak audit SOAP yang tersimpan (Modul 2)."
+    auditLogs(transaction_id: ID): [AuditLog!]! @field(resolver: "App\\GraphQL\\Queries\\AuditLogsQuery")
+}
+
+type Mutation {
+    "Tap-in: membuat transaksi parkir baru (status BERLANGSUNG)."
+    createTransaction(input: CreateTransactionInput!): TransactionResult!
+        @field(resolver: "App\\GraphQL\\Mutations\\CreateTransaction")
+
+    "Tap-out: menghitung biaya parkir (status SUDAH_CHECKOUT)."
+    checkoutTransaction(id: ID!, voucher_code: String): TransactionResult!
+        @field(resolver: "App\\GraphQL\\Mutations\\CheckoutTransaction")
+
+    """
+    TRANSAKSI KRITIS (state-changing keuangan).
+    Menyelesaikan pembayaran -> memicu orkestrasi: cek role SSO (Modul 1) ->
+    kirim SOAP audit & simpan ReceiptNumber (Modul 2) -> broadcast event ke
+    RabbitMQ (Modul 3). Membutuhkan Bearer JWT dengan role lokal yang berhak.
+    """
+    payTransaction(id: ID!, payment_method: String): PaymentResult!
+        @field(resolver: "App\\GraphQL\\Mutations\\PayTransaction")
+}
+
+input CreateTransactionInput {
+    location_id: String!
+    member_card_id: String
+}
+
+type Transaction {
+    id: ID!
+    location_id: String!
+    member_card_id: String
+    entry_time: String
+    exit_time: String
+    duration_hours: Float
+    base_rate: Float
+    benefit: Float
+    total_amount: Float
+    status: String!
+    payment_method: String
+    voucher_code: String
+    paid_at: String
+    audit_receipt_number: String
+    audit_status: String
+    event_published_status: String
+    processed_by: String
+    created_at: String
+}
+
+type TransactionResult {
+    status: String!
+    message: String!
+    transaction: Transaction
+}
+
+"Hasil mutation payTransaction beserta bukti orkestrasi tiga sistem pusat."
+type PaymentResult {
+    status: String!
+    message: String!
+    transaction: Transaction
+    audit: AuditResult
+    event: EventResult
+}
+
+"Ringkasan hasil pengiriman SOAP audit (Modul 2)."
+type AuditResult {
+    ok: Boolean!
+    receipt_number: String
+    status: String
+    http_status: Int
+    error: String
+}
+
+"Ringkasan hasil publish event ke RabbitMQ (Modul 3)."
+type EventResult {
+    ok: Boolean!
+    message_id: String
+    http_status: Int
+    error: String
+    response: String
+}
+
+type AuditLog {
+    id: ID!
+    transaction_id: String
+    activity_name: String!
+    team_id: String!
+    receipt_number: String
+    status: String
+    http_status: Int
+    error_message: String
+    created_at: String
+}
+
+"Identitas SSO + role lokal hasil federasi (Modul 1)."
+type SsoIdentity {
+    authenticated: Boolean!
+    subject: String
+    email: String
+    name: String
+    token_type: String
+    local_role: String
+    can_pay: Boolean!
+}
+
+type HealthStatus {
+    service: String!
+    status: String!
+    framework: String!
+    graphql: String!
+    central_reachable: Boolean!
+    timestamp: String!
+}
