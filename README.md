@@ -115,6 +115,12 @@ curl.exe http://localhost/health/service-c
 
 Jika muncul `502 Bad Gateway` gateway sudah hidup tetapi service tujuan belum siap jadi ditunggu sebentar lalu ulangi command health.
 
+Jika service baru saja direbuild tetapi masih 502, restart gateway. Nginx perlu membaca ulang alamat container service yang baru.
+
+~~~powershell
+docker compose restart api_gateway
+~~~
+
 ## Endpoint Lewat Gateway
 
 - GET /health
@@ -168,6 +174,7 @@ Jika output berupa `502 Bad Gateway` tunggu Service A selesai boot lalu coba lag
 
 ~~~powershell
 Start-Sleep -Seconds 20
+docker compose restart api_gateway
 docker compose logs app_service_a --tail=80
 ~~~
 
