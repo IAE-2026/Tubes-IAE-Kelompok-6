@@ -5,7 +5,7 @@ NIM: 102022400039
 Service: Service A, Lahan dan Lokasi Parkir
 Folder: services/farid-lahan-lokasi
 
-Ringkasan kontribusi
+Ringkasan kontribusi individu
 
 Saya mengerjakan Service A sebagai service lahan dan lokasi parkir. Service ini menangani data lokasi parkir, kapasitas slot, tarif dasar, audit ke sistem pusat, dan pengiriman event saat data lokasi berubah.
 
