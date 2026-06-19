@@ -19,27 +19,31 @@ class SmartParkingGateway
         return $this->mockLocation($locationId);
     }
 
-    public function occupySpot(string $locationId): ?array
-    {
-        if ($this->serviceAUrl() === null) {
-            return null;
-        }
-
-        $payload = $this->post($this->serviceAUrl()."/api/v1/locations/{$locationId}/occupy-spot");
-
-        return $payload['data'] ?? null;
+public function occupySpot(string $locationId): ?array
+{
+    if ($this->serviceAUrl() === null) {
+        return null;
     }
 
-    public function releaseSpot(string $locationId): ?array
-    {
-        if ($this->serviceAUrl() === null) {
-            return null;
-        }
+    $payload = $this->post($this->serviceAUrl()."/api/v1/locations/{$locationId}/occupy", [
+        'slots' => 1,
+    ]);
 
-        $payload = $this->post($this->serviceAUrl()."/api/v1/locations/{$locationId}/release-spot");
+    return $payload['data'] ?? null;
+}
 
-        return $payload['data'] ?? null;
+   public function releaseSpot(string $locationId): ?array
+{
+    if ($this->serviceAUrl() === null) {
+        return null;
     }
+
+    $payload = $this->post($this->serviceAUrl()."/api/v1/locations/{$locationId}/release", [
+        'slots' => 1,
+    ]);
+
+    return $payload['data'] ?? null;
+}
 
     public function getMember(?string $memberCardId): ?array
     {
@@ -118,10 +122,20 @@ class SmartParkingGateway
         }
     }
 
-    private function headers(): array
-    {
-        return ['X-IAE-KEY' => config('services.smart_parking.internal_api_key')];
+private function headers(): array
+{
+    $headers = [
+        'X-IAE-KEY' => config('services.smart_parking.internal_api_key'),
+    ];
+
+    $token = app(IaeSsoClient::class)->m2mToken();
+
+    if ($token !== null) {
+        $headers['Authorization'] = 'Bearer '.$token;
     }
+
+    return $headers;
+}
 
     private function serviceAUrl(): ?string
     {
