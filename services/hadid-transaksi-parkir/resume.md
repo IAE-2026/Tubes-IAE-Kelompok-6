@@ -9,7 +9,7 @@ Ringkasan kontribusi
 
 Saya mengerjakan Service B sebagai service transaksi parkir dan payment. Service ini menangani proses tapping masuk, checkout, perhitungan biaya, diskon membership, dan pembayaran akhir.
 
-Kontribusi ini terlihat pada log commit di folder Service B. Commit yang tercatat atas nama Hadid Hamar adalah:
+Kontribusi ini terlihat pada log commit di folder Service B. Commit yang tercatat atas nama Hadidzz adalah:
 
 1. 1ab5a11, tambahan nim
 2. d8559a2, tambah nim saya
@@ -21,7 +21,7 @@ Detail kontribusi
 
 1. Menyesuaikan identitas integrasi SSO
 
-Saya menambahkan NIM Hadid, yaitu 102022400126, ke konfigurasi Service B. Perubahan ini membuat Service B mengikuti aturan terbaru dosen. Request token M2M sekarang membawa api_key dan nim.
+Saya menambahkan NIM saya sendiri, yaitu 102022400126, ke konfigurasi Service B. Perubahan ini membuat Service B mengikuti aturan terbaru dosen. Request token M2M sekarang membawa api_key dan nim.
 
 Dampak:
 Service B bisa meminta token SSO M2M dengan identitas yang benar.
