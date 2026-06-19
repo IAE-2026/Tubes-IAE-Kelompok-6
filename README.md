@@ -47,8 +47,8 @@ Tubes-IAE-Kelompok-6/
 - Hanya API Gateway yang membuka port host, yaitu port 80.
 - Service B memanggil Service A untuk membaca lokasi dan update slot parkir.
 - Service B memanggil Service C untuk membaca membership dan diskon.
-- Service yang melakukan transaksi penting memakai alur SSO, SOAP Audit, lalu RabbitMQ.
-- Service C mengambil token M2M sendiri sebelum publish event ke RabbitMQ dosen.
+- Service yang melakukan transaksi penting memakai alur SSO, SOAP Audit, lalu mengirim event ke sistem pusat.
+- Service C mengambil token M2M sendiri sebelum mengirim event ke sistem pusat.
 
 ## Teknologi
 
@@ -58,7 +58,7 @@ Tubes-IAE-Kelompok-6/
 - Database: MySQL 8
 - Auth: JWT dari SSO dosen
 - Audit: SOAP XML
-- Event: RabbitMQ lewat HTTP publisher cloud dosen
+- Event: HTTP publisher ke sistem pusat dosen
 - API tambahan Service B: REST dan GraphQL
 
 ## Konfigurasi SSO Dosen
@@ -69,7 +69,7 @@ Request token M2M wajib membawa `api_key` dan `nim`.
 - Service B memakai `KEY-MHS-185` dan NIM `102022400126`.
 - Service C memakai `KEY-MHS-45` dan NIM `102022400023`.
 
-Service C memakai token M2M Dinda untuk publish event RabbitMQ. Ini mencegah error `401 Unauthorized` saat hit endpoint `api/v1/messages/publish`.
+Service C memakai token M2M Dinda sebelum mengirim event ke sistem pusat. Ini mencegah error `401 Unauthorized` saat proses integrasi berjalan.
 
 ## Cara Menjalankan
 
@@ -151,16 +151,16 @@ curl.exe http://localhost/api/v1/memberships `
   -H "Authorization: Bearer $token"
 ~~~
 
-Cek bukti RabbitMQ dari Service C. Endpoint membership akan memicu event `order_created`.
+Cek log integrasi pusat dari Service C setelah endpoint membership dipanggil.
 
 ~~~powershell
-docker compose logs app_service_c --tail=120 | Select-String -Pattern "RabbitMQ API Publish Sukses|RabbitMQ API Gagal|Token M2M"
+docker compose logs app_service_c --tail=120 | Select-String -Pattern "Publish Sukses|Gagal|Token M2M"
 ~~~
 
 Output yang diharapkan:
 
 ~~~text
-RabbitMQ API Publish Sukses: Event order_created
+Publish Sukses
 ~~~
 
 Cek transaksi.
@@ -184,8 +184,8 @@ curl.exe http://localhost/api/v1/transactions -H "X-IAE-KEY: 102022400126"
 - docker compose ps menampilkan semua container Up.
 - GET http://localhost/ menampilkan status gateway TEAM-06.
 - POST /api/v1/locations menghasilkan receipt_number dari SOAP Audit.
-- GET /api/v1/memberships memicu publish event RabbitMQ dari Service C.
-- Log Service C menampilkan RabbitMQ API Publish Sukses.
+- GET /api/v1/memberships memicu integrasi event dari Service C.
+- Log Service C menampilkan status publish sukses.
 - POST /api/v1/transactions memakai location_id dari Service A.
 - Checkout memakai base_rate dari Service A.
 - Payment menghasilkan status SELESAI.
