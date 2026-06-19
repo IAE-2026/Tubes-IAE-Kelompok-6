@@ -1,6 +1,6 @@
 # Tubes IAE Kelompok 6 - Smart Parking
 
-Repositori ini menggabungkan tiga service Smart Parking dalam satu sistem. Kamu menjalankan semua service dengan Docker Compose. Kamu mengakses semua API lewat API Gateway Nginx di http://localhost.
+Repositori ini menggabungkan tiga service Smart Parking dalam satu sistem. Menjalankan semua service dengan Docker Compose. Mengakses semua API lewat API Gateway Nginx di http://localhost.
 
 ## Anggota dan Service
 
@@ -113,7 +113,7 @@ curl.exe http://localhost/health/service-a
 curl.exe http://localhost/health/service-c
 ~~~
 
-Jika muncul `502 Bad Gateway`, gateway sudah hidup tetapi service tujuan belum siap. Tunggu sebentar, lalu ulangi command health.
+Jika muncul `502 Bad Gateway` gateway sudah hidup tetapi service tujuan belum siap jadi ditunggu sebentar lalu ulangi command health.
 
 ## Endpoint Lewat Gateway
 
@@ -134,7 +134,7 @@ Jika muncul `502 Bad Gateway`, gateway sudah hidup tetapi service tujuan belum s
 
 ## Contoh Test Singkat
 
-Ambil token M2M Service A. Simpan response mentah dulu agar mudah dicek.
+Ambil token M2M Service A terus Simpan response mentah agar mudah dicek
 
 ~~~powershell
 $responseRaw = curl.exe -s -X POST http://localhost/api/v1/sso/login-m2m `
@@ -164,7 +164,7 @@ docker compose ps
 docker compose up -d --build api_gateway app_service_a
 ~~~
 
-Jika output berupa `502 Bad Gateway`, tunggu Service A selesai boot lalu coba lagi.
+Jika output berupa `502 Bad Gateway` tunggu Service A selesai boot lalu coba lagi.
 
 ~~~powershell
 Start-Sleep -Seconds 20
@@ -233,5 +233,3 @@ Repo ini memakai branch service untuk menjaga bukti kontribusi anggota:
 - service-b-hadid
 - service-c-dinda
 - main sebagai branch integrasi
-
-Log prompt AI tersedia di folder service masing-masing.
