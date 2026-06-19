@@ -16,9 +16,9 @@ graph TD
     Client[Client / Postman] -->|HTTP Port 80| Nginx[API Gateway - Nginx]
     
     subgraph Local Container Network (smart_parking_net)
-        Nginx -->|Proxy Pass| ServA[Service A: Lahan & Lokasi]
-        Nginx -.->|Proxy Pass| ServB[Service B: Transaksi - Stub]
-        Nginx -.->|Proxy Pass| ServC[Service C: Pembayaran - Stub]
+       Nginx -->|Proxy Pass| ServA[Service A: Lahan & Lokasi]
+        Nginx -->|Proxy Pass| ServB[Service B: Transaksi Parkir & Payment]
+        Nginx -->|Proxy Pass| ServC[Service C: Membership & Voucher]
         
         ServA -->|TCP 3306| DBA[(Service A MySQL DB)]
         ServB -.-> DBB[(Service B DB)]
@@ -43,10 +43,12 @@ graph TD
 No backend container (such as Laravel app, MySQL database) is directly accessible from the internet. All incoming traffic must pass through the **Nginx API Gateway**:
 * **Port Exposure**: Only port `80` (HTTP) is mapped on the host machine.
 * **Routing Rules**:
-  * `/api/v1/locations` $\rightarrow$ `http://smart-parking-service-a-app:3001`
-  * `/api/v1/sso` $\rightarrow$ `http://smart-parking-service-a-app:3001`
-  * `/api/v1/transactions` $\rightarrow$ Service B (to be implemented)
-  * `/api/v1/payments` $\rightarrow$ Service C (to be implemented)
+* `/api/v1/locations` -> Service A Farid
+* `/api/v1/sso` -> Service A Farid
+* `/api/v1/transactions` -> Service B Hadid
+* `/graphql` dan `/graphiql` -> Service B Hadid
+* `/api/v1/memberships` -> Service C Dinda
+* `/api/sso` -> Service C Dinda
 * **Header Enrichment**: Nginx acts as a reverse proxy, forwarding client headers (`Host`, `X-Real-IP`, `X-Forwarded-For`, `Authorization`) to downstream services to ensure JWT signatures and IPs can be processed accurately.
 
 ---
