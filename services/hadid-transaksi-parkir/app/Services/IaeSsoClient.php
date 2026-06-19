@@ -83,20 +83,21 @@ class IaeSsoClient
      * Access token Machine-to-Machine (di-cache singkat) untuk dipakai
      * sebagai Bearer ke endpoint SOAP & publish.
      */
-    public function m2mToken(bool $fresh = false): ?string
-    {
-        $ttl = (int) config('iae.cache_ttl.m2m_token', 240);
+public function m2mToken(bool $fresh = false): ?string
+{
+    $ttl = (int) config('iae.cache_ttl.m2m_token', 240);
 
-        if ($fresh) {
-            Cache::forget('iae:m2m_token');
-        }
+    if ($fresh) {
+        Cache::forget('iae:m2m_token');
+    }
 
-       return Cache::remember('iae:m2m_token', $ttl, function (): ?string {
-    return $this->requestToken([
-        'api_key' => config('iae.api_key'),
-        'nim' => config('iae.nim'),
-    ]);
-});
+    return Cache::remember('iae:m2m_token', $ttl, function (): ?string {
+        return $this->requestToken([
+            'api_key' => config('iae.api_key'),
+            'nim' => config('iae.nim'),
+        ]);
+    });
+}
 
     /**
      * Access token end-user (SSO Warga). Tidak di-cache.
