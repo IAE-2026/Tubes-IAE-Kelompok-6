@@ -24,6 +24,7 @@ return [
 
     // Modul 1 - Autentikasi Machine-to-Machine (M2M)
     'api_key' => env('IAE_API_KEY', 'KEY-MHS-185'),
+    'nim' => env('IAE_NIM', '102022400126'),
 
     // Modul 1 - Autentikasi End-User (SSO Warga), dipakai jika ingin simulasi login warga
     'warga' => [
