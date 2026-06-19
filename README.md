@@ -222,8 +222,6 @@ curl.exe http://localhost/api/v1/transactions -H "X-IAE-KEY: 102022400126"
 
 ## Cek Singkat Project
 
-Gunakan bagian ini untuk memastikan project berjalan di perangkat kamu.
-
 - Semua container berjalan lewat Docker Compose.
 - API Gateway bisa diakses lewat `http://localhost/`.
 - Service lokasi, transaksi, dan membership bisa diakses lewat gateway.
