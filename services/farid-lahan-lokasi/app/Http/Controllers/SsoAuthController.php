@@ -85,11 +85,13 @@ class SsoAuthController extends Controller
      */
     public function loginM2M(Request $request)
     {
-        $apiKey = $request->input('api_key', env('IAE_API_KEY', 'KEY-MHS-67'));
+       $apiKey = $request->input('api_key', env('IAE_API_KEY', 'KEY-MHS-67'));
+        $nim = $request->input('nim', env('IAE_NIM', '102022400039'));
 
         try {
             $response = Http::timeout(15)->post("{$this->ssoUrl}/api/v1/auth/token", [
-                'api_key' => $apiKey,
+            'api_key' => $apiKey,
+            'nim' => $nim,
             ]);
 
             $data = $response->json();
