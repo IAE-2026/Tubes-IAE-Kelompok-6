@@ -28,6 +28,6 @@ RUN chmod -R 775 /var/www/storage /var/www/bootstrap/cache
 EXPOSE 3001
 
 CMD php artisan migrate --force && \
-    php artisan db:seed --force && \
-    php artisan l5-swagger:generate && \
+    (php artisan db:seed --force || true) && \
+    (php artisan l5-swagger:generate || true) && \
     php artisan serve --host=0.0.0.0 --port=3001
