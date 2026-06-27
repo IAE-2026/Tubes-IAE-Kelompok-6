@@ -20,7 +20,7 @@ WORKDIR /app
 
 # Copy composer files and install dependencies
 COPY composer.json composer.lock ./
-RUN composer install --no-dev --optimize-autoloader --no-scripts --no-interaction
+RUN COMPOSER_MAX_PARALLEL_HTTP=1 composer install --no-dev --optimize-autoloader --no-scripts --no-interaction
 
 # Copy application code
 COPY . .
